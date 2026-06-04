@@ -7,11 +7,6 @@ Output: pre_covid_infection (RID: ri.foundry.main.dataset.051e1ecc-3dc1-429c-bb9
 ================================================================================
 """
 
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.051e1ecc-3dc1-429c-bb94-728701be621a"),
-    condition_occurrence=Input(rid="ri.foundry.main.dataset.526c0452-7c18-46b6-8a5d-59be0b79a10b"),
-    measurement=Input(rid="ri.foundry.main.dataset.29834e2c-f924-45e8-90af-246d29456293")
-)
 # All COVID-19 positive patients as of 09/17/2024
 # Template imports
 

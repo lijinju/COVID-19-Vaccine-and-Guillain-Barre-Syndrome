@@ -7,10 +7,7 @@ Output: vaccine_fact_second_dose
 ================================================================================
 */
 
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.vaccine_fact_second_dose"),
-    Pre_covid_vaccine_all_record=Input(rid="ri.foundry.main.dataset.854179e7-c862-4657-a89b-9537f6c78e85")
-)
+
 
 WITH RankedVaccinations AS (
     SELECT

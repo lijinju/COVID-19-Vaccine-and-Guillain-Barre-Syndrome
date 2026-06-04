@@ -7,10 +7,7 @@ Output: well_visits (RID: ri.foundry.main.dataset.4fb8bda7-fd80-4e1d-992b-ea2753
 ================================================================================
 */
 
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.4fb8bda7-fd80-4e1d-992b-ea2753f24a4f"),
-    procedure_occurrence=Input(rid="ri.foundry.main.dataset.f8826e21-741d-49bb-a7eb-47ea98bb2b5f")
-)
+
 -- Extract well-check visits, preventive care, physical examinations
 -- Concept IDs include: routine physicals, wellness checks, preventive visits
 

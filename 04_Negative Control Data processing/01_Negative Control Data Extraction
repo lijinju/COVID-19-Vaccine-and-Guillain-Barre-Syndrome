@@ -10,10 +10,7 @@ Output: wellness_visits, wellness_visits_after2020, first_wellness_visit_per_per
 -- =============================================================================
 -- PART 1: Extract Wellness Visit Concepts from Procedure Occurrence
 -- =============================================================================
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.4fb8bda7-fd80-4e1d-992b-ea2753f24a4f"),
-    procedure_occurrence=Input(rid="ri.foundry.main.dataset.f8826e21-741d-49bb-a7eb-47ea98bb2b5f")
-)
+
 -- Extract well-check visits, preventive care, physical examinations
 -- Concept IDs include: routine physicals, wellness checks, preventive visits
 
@@ -45,19 +42,11 @@ WHERE procedure_concept_id IN (
     4094040, 45465582, 3243797, 45482311, 4094041, 40310831, 45913322, 45918129, 
     45953355, 3144773, 4091831, 45469041, 3059601, 3343802, 45462197
 )
--- Also include concepts with 'Well' in the name
-OR LOWER(procedure_concept_name) LIKE '%well%'
-   AND procedure_concept_name NOT LIKE '%covid%'
-   AND procedure_concept_name NOT LIKE '%vaccine%';
-
 
 -- =============================================================================
 -- PART 2: Filter Wellness Visits After Vaccine Rollout Date (2020-12-11)
 -- =============================================================================
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.wellness_visits_after2020"),
-    wellness_visits=Input(rid="ri.foundry.main.dataset.4fb8bda7-fd80-4e1d-992b-ea2753f24a4f")
-)
+
 -- Filter to wellness visits after vaccine rollout date (December 11, 2020)
 SELECT *
 FROM wellness_visits

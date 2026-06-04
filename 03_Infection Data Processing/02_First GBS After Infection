@@ -8,10 +8,7 @@ Output: GBS_infection_group
 */
 
 -- First GBS after infection (risk period)
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.gbs_infection_risk_period"),
-    GBS_infection_risk=Input(rid="ri.foundry.main.dataset.gbs_infection_risk_30")
-)
+
 SELECT 
     person_id, 
     MIN(condition_start_date) AS first_gbs_after_infection
@@ -20,11 +17,7 @@ WHERE infection_first_group = 1
 GROUP BY person_id;
 
 -- Control period: GBS in the year BEFORE infection
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.gbs_infection_before365"),
-    GBS_ALL=Input(rid="ri.foundry.main.dataset.d8e6fa28-ed1a-4672-87c4-5eb4f2edb1c7"),
-    Infection_first_group_2=Input(rid="ri.foundry.main.dataset.845ea822-97f8-4f0b-87ae-af867bc00ddc")
-)
+
 SELECT
     i.person_id,  
     i.first_infection_date, 
@@ -42,11 +35,7 @@ WHERE (DATEDIFF(g.condition_start_date, i.first_infection_date) > -365
   AND i.first_infection_date >= '2020-12-11';
 
 -- Final: First GBS after infection (excluding prior GBS)
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.b5c406ab-ca16-43c8-9e8f-4a3ebd4b86d6"),
-    GBS_infection_risk_period=Input(rid="ri.foundry.main.dataset.gbs_infection_risk_period"),
-    GBS_infection_before365=Input(rid="ri.foundry.main.dataset.gbs_infection_before365")
-)
+
 SELECT 
     person_id, 
     MIN(first_gbs_after_infection) AS first_condition_start_date

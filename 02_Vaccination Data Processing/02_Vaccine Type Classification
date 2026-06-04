@@ -7,11 +7,7 @@ Output: vaccine_fact_with_types (RID: ri.foundry.main.dataset.3289c83e-15c8-496f
 ================================================================================
 */
 
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.3289c83e-15c8-496f-9406-05d0132ecd8a"),
-    Pre_covid_vaccine_all_record=Input(rid="ri.foundry.main.dataset.854179e7-c862-4657-a89b-9537f6c78e85"),
-    all_vaccine_fact=Input(rid="ri.foundry.main.dataset.5d91ed14-c550-4062-9494-a0671f8323ea")
-)
+
 -- Add vaccine type classification to the vaccination fact table
 SELECT *
 FROM (

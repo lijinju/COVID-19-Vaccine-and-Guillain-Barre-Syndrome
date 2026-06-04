@@ -7,11 +7,7 @@ Output: Infection_first_group_2
 ================================================================================
 */
 
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.845ea822-97f8-4f0b-87ae-af867bc00ddc"),
-    all_infection_fact=Input(rid="ri.foundry.main.dataset.ffc7413c-a348-43cb-a4c1-e0a59d876088"),
-    all_vaccine_fact=Input(rid="ri.foundry.main.dataset.8e1971a5-adb1-4748-a98a-c367ce23d885")
-)
+
 -- Infection first cohort: People infected BEFORE vaccination (or no vaccine)
 -- Reference date: 2020-12-11
 
@@ -42,10 +38,7 @@ WHERE (i.first_infection_date < v.first_shot OR v.person_id IS NULL)
   AND (i.first_infection_date >= '2020-12-11');
 
 -- Extract just the person_ids for the infection-first cohort
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.infection_first_cohort_persons"),
-    Infection_first_group=Input(rid="ri.foundry.main.dataset.d7a1f7d0-5648-4c67-89d0-a8c70996ec35")
-)
+
 SELECT DISTINCT person_id, first_infection_date
 FROM Infection_first_group
 WHERE infection_first_group = 1;

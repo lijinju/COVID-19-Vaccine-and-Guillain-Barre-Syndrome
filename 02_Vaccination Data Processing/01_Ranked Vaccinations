@@ -1,7 +1,4 @@
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.8e1971a5-adb1-4748-a98a-c367ce23d885"),
-    Pre_covid_vaccine_all_record=Input(rid="ri.foundry.main.dataset.61ce4ec2-82a4-4119-b582-4834db875317")
-)
+
 -- Vaccination rank: first 5 shots with intervals
 
 WITH RankedVaccinations AS (

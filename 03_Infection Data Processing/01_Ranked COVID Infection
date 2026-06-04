@@ -7,10 +7,6 @@ Output: all_infection_fact (person_id with first_infection_date, second_infectio
 ================================================================================
 */
 
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.ffc7413c-a348-43cb-a4c1-e0a59d876088"),
-    pre_covid_infection=Input(rid="ri.foundry.main.dataset.051e1ecc-3dc1-429c-bb94-728701be621a")
-)
 
 WITH RankedInfections AS (
     SELECT DISTINCT
