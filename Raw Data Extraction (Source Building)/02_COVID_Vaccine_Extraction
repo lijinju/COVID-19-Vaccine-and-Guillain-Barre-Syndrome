@@ -1,0 +1,32 @@
+/*
+================================================================================
+File: 02_COVID_Vaccine_Extraction.sql
+Description: Extract COVID-19 vaccination records from drug_exposure
+Input: concept, drug_exposure
+Output: Pre_covid_vaccine_all_record
+================================================================================
+*/
+
+@transform_pandas(
+    Output(rid="ri.foundry.main.dataset.61ce4ec2-82a4-4119-b582-4834db875317"),
+    concept=Input(rid="ri.foundry.main.dataset.5cb3c4a3-327a-47bf-a8bf-daf0cafe6772"),
+    drug_exposure=Input(rid="ri.foundry.main.dataset.fd499c1d-4b37-4cda-b94f-b7bf70a014da")
+)
+
+WITH covid_vaccine_concepts AS (
+    SELECT *
+    FROM concept
+    WHERE LOWER(concept_name) LIKE '%covid-19%vaccine%' 
+      AND domain_id = 'Drug'
+)
+
+SELECT DISTINCT 
+    d.person_id,
+    d.drug_exposure_start_date,
+    d.drug_concept_id,
+    c.concept_name AS drug_concept_name,
+    d.drug_exposure_id
+FROM drug_exposure d
+INNER JOIN covid_vaccine_concepts c 
+    ON d.drug_concept_id = c.concept_id
+WHERE d.drug_exposure_start_date >= '2020-12-11';
