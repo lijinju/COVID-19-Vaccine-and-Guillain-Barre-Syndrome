@@ -1,0 +1,35 @@
+-- =============================================================================
+-- First Wellness Visit Per Person (Ranked)
+-- =============================================================================
+
+
+WITH RankedVisits AS (
+    SELECT
+        person_id,
+        procedure_date AS visit_date,
+        procedure_concept_name,
+        ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY procedure_date ASC) AS visit_rank
+    FROM (
+        SELECT DISTINCT person_id, procedure_date, procedure_concept_name
+        FROM wellness_visits_after2020
+    )
+)
+SELECT
+    person_id,
+    MAX(CASE WHEN visit_rank = 1 THEN visit_date END) AS first_visit,
+    MAX(CASE WHEN visit_rank = 1 THEN procedure_concept_name END) AS first_visit_concept,
+    MAX(CASE WHEN visit_rank = 2 THEN visit_date END) AS second_visit,
+    MAX(CASE WHEN visit_rank = 3 THEN visit_date END) AS third_visit,
+    MAX(CASE WHEN visit_rank = 4 THEN visit_date END) AS fourth_visit,
+    MAX(CASE WHEN visit_rank = 5 THEN visit_date END) AS fifth_visit,
+    COUNT(*) AS total_visits,
+    CAST(
+        (CASE WHEN MAX(CASE WHEN visit_rank = 1 THEN visit_date END) IS NOT NULL THEN 1 ELSE 0 END) +
+        (CASE WHEN MAX(CASE WHEN visit_rank = 2 THEN visit_date END) IS NOT NULL THEN 1 ELSE 0 END) +
+        (CASE WHEN MAX(CASE WHEN visit_rank = 3 THEN visit_date END) IS NOT NULL THEN 1 ELSE 0 END) +
+        (CASE WHEN MAX(CASE WHEN visit_rank = 4 THEN visit_date END) IS NOT NULL THEN 1 ELSE 0 END) +
+        (CASE WHEN MAX(CASE WHEN visit_rank = 5 THEN visit_date END) IS NOT NULL THEN 1 ELSE 0 END) AS VARCHAR(3)
+    ) AS total_visit_count
+FROM RankedVisits
+GROUP BY person_id
+ORDER BY person_id;
