@@ -1,0 +1,21 @@
+/*
+================================================================================
+File: 09_GBS_Outcome_Flagging.sql (Infection First Section)
+Description: Add GBS outcome flags and start dates to infection-first cohort
+Input: GBS_infection_group, Infection_first_group_2
+Output: GBS_IG_outcome_2
+================================================================================
+*/
+
+@transform_pandas(
+    Output(rid="ri.foundry.main.dataset.0c7361f6-6681-4f68-ac11-1827548277ff"),
+    GBS_infection_group=Input(rid="ri.foundry.main.dataset.b5c406ab-ca16-43c8-9e8f-4a3ebd4b86d6"),
+    Infection_first_group_2=Input(rid="ri.foundry.main.dataset.845ea822-97f8-4f0b-87ae-af867bc00ddc")
+)
+-- Add has_GBS flag and GBS start date to infection-first cohort
+SELECT DISTINCT 
+    i.*,
+    CASE WHEN g.person_id IS NOT NULL THEN 1 ELSE 0 END AS has_GBS,
+    g.first_condition_start_date AS GBS_start_date
+FROM Infection_first_group_2 i
+LEFT JOIN GBS_infection_group g ON g.person_id = i.person_id;
