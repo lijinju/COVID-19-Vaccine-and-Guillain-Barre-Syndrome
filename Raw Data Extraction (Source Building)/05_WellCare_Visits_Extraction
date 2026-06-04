@@ -1,0 +1,48 @@
+/*
+================================================================================
+File: 05_Extract_Well_Visits.sql
+Description: Extract well-check / preventive care / physical exam visits
+Input: procedure_occurrence
+Output: well_visits (RID: ri.foundry.main.dataset.4fb8bda7-fd80-4e1d-992b-ea2753f24a4f)
+================================================================================
+*/
+
+@transform_pandas(
+    Output(rid="ri.foundry.main.dataset.4fb8bda7-fd80-4e1d-992b-ea2753f24a4f"),
+    procedure_occurrence=Input(rid="ri.foundry.main.dataset.f8826e21-741d-49bb-a7eb-47ea98bb2b5f")
+)
+-- Extract well-check visits, preventive care, physical examinations
+-- Concept IDs include: routine physicals, wellness checks, preventive visits
+
+SELECT 
+    person_id,
+    procedure_concept_id,
+    procedure_concept_name,
+    procedure_date,
+    procedure_type_concept_id,
+    modifier_concept_id,
+    quantity,
+    provider_id,
+    visit_occurrence_id,
+    visit_detail_id,
+    procedure_source_value,
+    procedure_source_concept_id,
+    modifier_source_value
+FROM procedure_occurrence
+WHERE procedure_concept_id IN (
+    -- Core well-visit concepts
+    4088016, 4132649, 44830762, 45949788, 45937583, 3403907, 4132649, 4259640, 
+    4132657, 4256500, 4132658, 4132659, 4259641, 4259638, 4256502, 4253755, 
+    4259642, 4256501, 4253756, 4256497, 4256496, 4259639, 4253753, 4256498, 
+    4132652, 4132653, 4253752, 4132654, 4253754, 4132655, 4256499, 4132656, 
+    4259636, 3545551, 44812389, 4044554, 40642538, 4061660, 44809259, 45449301,
+    
+    -- Additional exam concepts
+    4145333, 3065439, 40379655, 40316460, 3082852, 3065705, 4094039, 3144772, 
+    4094040, 45465582, 3243797, 45482311, 4094041, 40310831, 45913322, 45918129, 
+    45953355, 3144773, 4091831, 45469041, 3059601, 3343802, 45462197
+)
+-- Also include concepts with 'Well' in the name
+OR LOWER(procedure_concept_name) LIKE '%well%'
+   AND procedure_concept_name NOT LIKE '%covid%'
+   AND procedure_concept_name NOT LIKE '%vaccine%';
