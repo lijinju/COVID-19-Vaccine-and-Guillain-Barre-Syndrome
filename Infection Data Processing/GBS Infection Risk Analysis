@@ -1,0 +1,83 @@
+/*
+================================================================================
+File: GBS_Infection_Risk_Analysis.sql
+Description: Calculate GBS risk within 30/60/90 days after COVID-19 infection
+Input: GBS_ALL, Infection_first_group_2
+Output: GBS_infection_risk_30, GBS_infection_risk_60, GBS_infection_risk_90
+================================================================================
+*/
+
+-- Part 1: GBS within 30 days after infection
+@transform_pandas(
+    Output(rid="ri.foundry.main.dataset.gbs_infection_risk_30"),
+    GBS_ALL=Input(rid="ri.foundry.main.dataset.d8e6fa28-ed1a-4672-87c4-5eb4f2edb1c7"),
+    Infection_first_group_2=Input(rid="ri.foundry.main.dataset.845ea822-97f8-4f0b-87ae-af867bc00ddc")
+)
+SELECT
+    i.person_id,  
+    i.first_infection_date AS infection_date, 
+    g.condition_start_date AS gbs_date, 
+    DATEDIFF(g.condition_start_date, i.first_infection_date) AS days_between,
+    CASE 
+        WHEN (DATEDIFF(g.condition_start_date, i.first_infection_date) BETWEEN 1 AND 29) 
+             OR g.person_id IS NULL THEN 1
+        ELSE 0
+    END AS infection_first_group,
+    CASE
+        WHEN (DATEDIFF(g.condition_start_date, i.first_infection_date) BETWEEN 1 AND 29) THEN 1
+        ELSE 0
+    END AS GBS_within_30_infection
+FROM Infection_first_group_2 i
+LEFT JOIN GBS_ALL g ON i.person_id = g.person_id 
+WHERE (DATEDIFF(g.condition_start_date, i.first_infection_date) BETWEEN 1 AND 29 OR g.person_id IS NULL) 
+  AND i.first_infection_date >= '2020-12-11';
+
+-- Part 2: GBS within 60 days after infection
+@transform_pandas(
+    Output(rid="ri.foundry.main.dataset.gbs_infection_risk_60"),
+    GBS_ALL=Input(rid="ri.foundry.main.dataset.d8e6fa28-ed1a-4672-87c4-5eb4f2edb1c7"),
+    Infection_first_group_2=Input(rid="ri.foundry.main.dataset.845ea822-97f8-4f0b-87ae-af867bc00ddc")
+)
+SELECT
+    i.person_id,  
+    i.first_infection_date AS infection_date, 
+    g.condition_start_date AS gbs_date, 
+    DATEDIFF(g.condition_start_date, i.first_infection_date) AS days_between,
+    CASE 
+        WHEN (DATEDIFF(g.condition_start_date, i.first_infection_date) BETWEEN 1 AND 59) 
+             OR g.person_id IS NULL THEN 1
+        ELSE 0
+    END AS infection_first_group,
+    CASE
+        WHEN (DATEDIFF(g.condition_start_date, i.first_infection_date) BETWEEN 1 AND 59) THEN 1
+        ELSE 0
+    END AS GBS_within_60_infection
+FROM Infection_first_group_2 i
+LEFT JOIN GBS_ALL g ON i.person_id = g.person_id 
+WHERE (DATEDIFF(g.condition_start_date, i.first_infection_date) BETWEEN 1 AND 59 OR g.person_id IS NULL) 
+  AND i.first_infection_date >= '2020-12-11';
+
+-- Part 3: GBS within 90 days after infection
+@transform_pandas(
+    Output(rid="ri.foundry.main.dataset.gbs_infection_risk_90"),
+    GBS_ALL=Input(rid="ri.foundry.main.dataset.d8e6fa28-ed1a-4672-87c4-5eb4f2edb1c7"),
+    Infection_first_group_2=Input(rid="ri.foundry.main.dataset.845ea822-97f8-4f0b-87ae-af867bc00ddc")
+)
+SELECT
+    i.person_id,  
+    i.first_infection_date AS infection_date, 
+    g.condition_start_date AS gbs_date, 
+    DATEDIFF(g.condition_start_date, i.first_infection_date) AS days_between,
+    CASE 
+        WHEN (DATEDIFF(g.condition_start_date, i.first_infection_date) BETWEEN 1 AND 89) 
+             OR g.person_id IS NULL THEN 1
+        ELSE 0
+    END AS infection_first_group,
+    CASE
+        WHEN (DATEDIFF(g.condition_start_date, i.first_infection_date) BETWEEN 1 AND 89) THEN 1
+        ELSE 0
+    END AS GBS_within_90_infection
+FROM Infection_first_group_2 i
+LEFT JOIN GBS_ALL g ON i.person_id = g.person_id 
+WHERE (DATEDIFF(g.condition_start_date, i.first_infection_date) BETWEEN 1 AND 89 OR g.person_id IS NULL) 
+  AND i.first_infection_date >= '2020-12-11';
