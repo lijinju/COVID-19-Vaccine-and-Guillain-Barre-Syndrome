@@ -1,0 +1,42 @@
+@transform_pandas(
+    Output(rid="ri.foundry.main.dataset.8e1971a5-adb1-4748-a98a-c367ce23d885"),
+    Pre_covid_vaccine_all_record=Input(rid="ri.foundry.main.dataset.61ce4ec2-82a4-4119-b582-4834db875317")
+)
+-- Vaccination rank: first 5 shots with intervals
+
+WITH RankedVaccinations AS (
+    SELECT
+        person_id,
+        drug_exposure_start_date AS vaccinated_date,
+        ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY drug_exposure_start_date ASC NULLS LAST) AS vaccination_rank
+    FROM (
+        SELECT DISTINCT person_id, drug_exposure_start_date
+        FROM Pre_covid_vaccine_all_record
+    )
+)
+SELECT 
+    person_id,
+    MAX(CASE WHEN vaccination_rank = 1 THEN vaccinated_date ELSE NULL END) AS first_shot,
+    MAX(CASE WHEN vaccination_rank = 2 THEN vaccinated_date ELSE NULL END) AS second_shot,
+    MAX(CASE WHEN vaccination_rank = 3 THEN vaccinated_date ELSE NULL END) AS third_shot,
+    MAX(CASE WHEN vaccination_rank = 4 THEN vaccinated_date ELSE NULL END) AS fourth_shot,
+    MAX(CASE WHEN vaccination_rank = 5 THEN vaccinated_date ELSE NULL END) AS fifth_shot,
+    CAST(
+        (CASE WHEN MAX(CASE WHEN vaccination_rank = 1 THEN vaccinated_date ELSE NULL END) IS NOT NULL THEN 1 ELSE 0 END) +
+        (CASE WHEN MAX(CASE WHEN vaccination_rank = 2 THEN vaccinated_date ELSE NULL END) IS NOT NULL THEN 1 ELSE 0 END) +
+        (CASE WHEN MAX(CASE WHEN vaccination_rank = 3 THEN vaccinated_date ELSE NULL END) IS NOT NULL THEN 1 ELSE 0 END) +
+        (CASE WHEN MAX(CASE WHEN vaccination_rank = 4 THEN vaccinated_date ELSE NULL END) IS NOT NULL THEN 1 ELSE 0 END) +
+        (CASE WHEN MAX(CASE WHEN vaccination_rank = 5 THEN vaccinated_date ELSE NULL END) IS NOT NULL THEN 1 ELSE 0 END) AS VARCHAR(3)
+    ) AS total_shots,
+    CASE 
+        WHEN DATEDIFF(second_shot, first_shot) BETWEEN 1 AND 29 THEN 1 
+        ELSE 0 
+    END AS first_second_less_than_30,
+    CASE 
+        WHEN DATEDIFF(third_shot, first_shot) BETWEEN 1 AND 29 THEN 1 
+        ELSE 0 
+    END AS first_third_less_than_30
+FROM RankedVaccinations
+GROUP BY person_id
+HAVING first_shot IS NOT NULL
+ORDER BY person_id;
