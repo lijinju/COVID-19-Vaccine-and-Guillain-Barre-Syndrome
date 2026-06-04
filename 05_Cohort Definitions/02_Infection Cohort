@@ -7,7 +7,7 @@ Output: Infection_first_cohort_full, Infection_first_group_2, Infection_first_co
 */
 
 -- =============================================================================
--- PART 1: Base Infection First Cohort Definition
+-- Base Infection First Cohort Definition
 -- =============================================================================
 
 -- Infection first cohort: People infected BEFORE vaccination (or never vaccinated)
@@ -56,7 +56,7 @@ WHERE (i.first_infection_date < v.first_shot OR v.person_id IS NULL)
   AND i.first_infection_date IS NOT NULL;
 
 -- =============================================================================
--- PART 2: Extract Distinct Person IDs for Infection First Cohort
+-- Extract Distinct Person IDs for Infection First Cohort
 -- =============================================================================
 
 -- Extract distinct person_ids with their first infection date
@@ -67,7 +67,7 @@ FROM Infection_first_cohort_full
 WHERE infection_first_group = 1;
 
 -- =============================================================================
--- PART 3: Age Filter (>= 18 years at time of infection)
+-- Age Filter (>= 18 years at time of infection)
 -- =============================================================================
 
 -- Filter to patients aged >= 18 years at time of first infection
@@ -83,7 +83,7 @@ WHERE p.year_of_birth IS NOT NULL
 ORDER BY i.person_id;
 
 -- =============================================================================
--- PART 4: Add GBS Outcome Flags to Infection First Cohort
+-- Add GBS Outcome Flags to Infection First Cohort
 -- =============================================================================
 
 -- Add has_GBS flag and GBS start date to infection-first cohort

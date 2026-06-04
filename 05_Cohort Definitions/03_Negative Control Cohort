@@ -76,17 +76,6 @@ SELECT
         THEN i.condition_start_date
         ELSE NULL
     END AS GBS_start_date,
-    
-    -- GBS timing categories
-    CASE 
-        WHEN DATEDIFF(i.condition_start_date, v.first_visit) BETWEEN 1 AND 7 THEN 'GBS_1-7_Days_After_Visit'
-        WHEN DATEDIFF(i.condition_start_date, v.first_visit) BETWEEN 8 AND 14 THEN 'GBS_8-14_Days_After_Visit'
-        WHEN DATEDIFF(i.condition_start_date, v.first_visit) BETWEEN 15 AND 21 THEN 'GBS_15-21_Days_After_Visit'
-        WHEN DATEDIFF(i.condition_start_date, v.first_visit) BETWEEN 22 AND 29 THEN 'GBS_22-29_Days_After_Visit'
-        WHEN DATEDIFF(i.condition_start_date, v.first_visit) < 0 THEN 'GBS_Before_Visit'
-        WHEN DATEDIFF(i.condition_start_date, v.first_visit) >= 30 THEN 'GBS_30+_Days_After_Visit'
-        ELSE 'No_GBS'
-    END AS gbs_timing_category
 
 FROM GBS_ALL i
 RIGHT JOIN unique_exam_wo_both v ON v.person_id = i.person_id 
