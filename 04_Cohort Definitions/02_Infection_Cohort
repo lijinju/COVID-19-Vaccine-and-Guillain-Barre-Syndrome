@@ -1,0 +1,95 @@
+================================================================================
+File: Define_Infection_First_Cohort.sql
+Description: Define cohort of people infected BEFORE vaccination (or never vaccinated)
+Input: all_infection_fact, all_vaccine_fact, person_1
+Output: Infection_first_cohort_full, Infection_first_group_2, Infection_first_cohort_age_filtered
+================================================================================
+*/
+
+-- =============================================================================
+-- PART 1: Base Infection First Cohort Definition
+-- =============================================================================
+
+-- Infection first cohort: People infected BEFORE vaccination (or never vaccinated)
+-- Reference date: 2020-12-11
+--
+-- infection_first_group = 1 means either:
+--   1. Infected and never got vaccinated
+--   2. Infected and vaccinated MORE than 30 days after infection
+--
+-- vaccine_within_30 = 1 means vaccine given 1-30 days after infection
+
+SELECT 
+    i.person_id, 
+    v.first_shot AS vaccine_date, 
+    i.first_infection_date AS infection_date, 
+    DATEDIFF(v.first_shot, i.first_infection_date) AS days_between_infection_and_vaccine,
+    
+    -- PRIMARY FLAG: infection_first_group
+    CASE 
+        WHEN (DATEDIFF(v.first_shot, i.first_infection_date) > 30 OR v.person_id IS NULL) THEN 1 
+        ELSE 0 
+    END AS infection_first_group,
+    
+    -- SECONDARY FLAG: vaccine within 30 days after infection
+    CASE
+        WHEN (DATEDIFF(v.first_shot, i.first_infection_date) > 0 
+              AND DATEDIFF(v.first_shot, i.first_infection_date) < 30) THEN 1
+        ELSE 0
+    END AS vaccine_within_30,
+    
+    -- TIMING CATEGORIES for stratified analysis
+    CASE 
+        WHEN v.person_id IS NULL THEN 'No_Vaccine'
+        WHEN DATEDIFF(v.first_shot, i.first_infection_date) <= 0 THEN 'Vaccine_Before_Infection'
+        WHEN DATEDIFF(v.first_shot, i.first_infection_date) BETWEEN 1 AND 29 THEN 'Vaccine_Within_30_Days_After_Infection'
+        WHEN DATEDIFF(v.first_shot, i.first_infection_date) BETWEEN 30 AND 59 THEN 'Vaccine_30-60_Days_After_Infection'
+        WHEN DATEDIFF(v.first_shot, i.first_infection_date) BETWEEN 60 AND 89 THEN 'Vaccine_60-90_Days_After_Infection'
+        WHEN DATEDIFF(v.first_shot, i.first_infection_date) >= 90 THEN 'Vaccine_90+_Days_After_Infection'
+        ELSE 'Other'
+    END AS vaccine_timing_category
+
+FROM all_infection_fact i
+LEFT JOIN all_vaccine_fact v ON i.person_id = v.person_id
+WHERE (i.first_infection_date < v.first_shot OR v.person_id IS NULL) 
+  AND i.first_infection_date >= '2020-12-11'
+  AND i.first_infection_date IS NOT NULL;
+
+-- =============================================================================
+-- PART 2: Extract Distinct Person IDs for Infection First Cohort
+-- =============================================================================
+
+-- Extract distinct person_ids with their first infection date
+SELECT DISTINCT 
+    person_id, 
+    infection_date AS first_infection_date
+FROM Infection_first_cohort_full
+WHERE infection_first_group = 1;
+
+-- =============================================================================
+-- PART 3: Age Filter (>= 18 years at time of infection)
+-- =============================================================================
+
+-- Filter to patients aged >= 18 years at time of first infection
+SELECT 
+    i.person_id,
+    i.first_infection_date,
+    p.year_of_birth,
+    (YEAR(i.first_infection_date) - p.year_of_birth) AS age_at_infection
+FROM Infection_first_group_2 i
+LEFT JOIN person_1 p ON i.person_id = p.person_id
+WHERE p.year_of_birth IS NOT NULL
+  AND (YEAR(i.first_infection_date) - p.year_of_birth) >= 18
+ORDER BY i.person_id;
+
+-- =============================================================================
+-- PART 4: Add GBS Outcome Flags to Infection First Cohort
+-- =============================================================================
+
+-- Add has_GBS flag and GBS start date to infection-first cohort
+SELECT DISTINCT 
+    i.*,
+    CASE WHEN g.person_id IS NOT NULL THEN 1 ELSE 0 END AS has_GBS,
+    g.first_condition_start_date AS GBS_start_date
+FROM Infection_first_group_2 i
+LEFT JOIN GBS_infection_group g ON g.person_id = i.person_id;
