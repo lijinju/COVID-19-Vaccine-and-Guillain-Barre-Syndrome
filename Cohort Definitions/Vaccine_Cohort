@@ -1,0 +1,112 @@
+/*
+================================================================================
+File: Define_Vaccine_First_Cohort.sql
+Description: Define cohort of people vaccinated BEFORE infection (or never infected)
+Input: all_vaccine_fact, all_infection_fact, person_1
+Output: Vaccine_first_cohort_full, Vaccine_first_group_2, Vaccine_first_cohort_age_filtered
+================================================================================
+*/
+
+-- =============================================================================
+-- PART 1: Base Vaccine First Cohort Definition (First Dose)
+-- =============================================================================
+@transform_pandas(
+    Output(rid="ri.foundry.main.dataset.bce9a01e-3aae-4d5b-9ffa-00d831e99293"),
+    all_infection_fact=Input(rid="ri.foundry.main.dataset.f9bde5dc-120d-40ba-97b6-022835d8aafa"),
+    all_vaccine_fact=Input(rid="ri.foundry.main.dataset.5d91ed14-c550-4062-9494-a0671f8323ea")
+)
+-- Vaccine first cohort: People vaccinated BEFORE infection (or never infected)
+-- Reference date: 2020-12-11 (vaccine rollout start)
+--
+-- vaccine_first_group = 1 means:
+--   1. Vaccinated and never had COVID-19 infection
+--   2. Vaccinated and infection occurred MORE than 30 days after vaccine
+--
+-- infection_within_30 = 1 means infection occurred 1-30 days after vaccine
+
+SELECT
+    v.person_id,  
+    v.first_shot AS vaccine_date,  
+    i.first_infection_date AS infection_date, 
+    DATEDIFF(i.first_infection_date, v.first_shot) AS days_between_vaccine_and_infection,
+    
+    -- PRIMARY FLAG: vaccine_first_group
+    CASE 
+        WHEN (DATEDIFF(i.first_infection_date, v.first_shot) > 30 OR i.person_id IS NULL) THEN 1
+        ELSE 0
+    END AS vaccine_first_group,
+    
+    -- SECONDARY FLAG: infection within 30 days (for sensitivity analysis)
+    CASE
+        WHEN (DATEDIFF(i.first_infection_date, v.first_shot) > 0 
+              AND DATEDIFF(i.first_infection_date, v.first_shot) < 30) THEN 1
+        ELSE 0
+    END AS infection_within_30,
+    
+    -- TIMING CATEGORIES for stratified analysis
+    CASE 
+        WHEN i.person_id IS NULL THEN 'No_Infection'
+        WHEN DATEDIFF(i.first_infection_date, v.first_shot) <= 0 THEN 'Infection_Before_Vaccine'
+        WHEN DATEDIFF(i.first_infection_date, v.first_shot) BETWEEN 1 AND 29 THEN 'Infection_Within_30_Days'
+        WHEN DATEDIFF(i.first_infection_date, v.first_shot) BETWEEN 30 AND 59 THEN 'Infection_30-60_Days'
+        WHEN DATEDIFF(i.first_infection_date, v.first_shot) BETWEEN 60 AND 89 THEN 'Infection_60-90_Days'
+        WHEN DATEDIFF(i.first_infection_date, v.first_shot) >= 90 THEN 'Infection_90+_Days'
+        ELSE 'Other'
+    END AS infection_timing_category
+
+FROM all_vaccine_fact v
+LEFT JOIN all_infection_fact i ON v.person_id = i.person_id 
+WHERE (i.first_infection_date > v.first_shot OR i.person_id IS NULL) 
+  AND v.first_shot >= '2020-12-11'
+  AND v.first_shot IS NOT NULL;
+
+-- =============================================================================
+-- PART 2: Extract Distinct Person IDs for Vaccine First Cohort
+-- =============================================================================
+@transform_pandas(
+    Output(rid="ri.foundry.main.dataset.71b4b89c-151d-4b8c-82d2-575e56cb3ca5"),
+    Vaccine_first_cohort_full=Input(rid="ri.foundry.main.dataset.bce9a01e-3aae-4d5b-9ffa-00d831e99293")
+)
+-- Extract distinct person_ids with their first vaccine date
+SELECT DISTINCT 
+    person_id, 
+    vaccine_date AS first_shot
+FROM Vaccine_first_cohort_full
+WHERE vaccine_first_group = 1;
+
+-- =============================================================================
+-- PART 3: Age Filter (>= 18 years at time of vaccination)
+-- =============================================================================
+@transform_pandas(
+    Output(rid="ri.foundry.main.dataset.d5d8a5c9-80ce-4bbc-a425-96f38f3abaf4"),
+    Vaccine_first_group_2=Input(rid="ri.foundry.main.dataset.71b4b89c-151d-4b8c-82d2-575e56cb3ca5"),
+    person_1=Input(rid="ri.foundry.main.dataset.af5e5e91-6eeb-4b14-86df-18d84a5aa010")
+)
+-- Filter to patients aged >= 18 years at time of first vaccination
+SELECT 
+    v.person_id,
+    MIN(v.first_shot) AS first_shot_date,
+    p.year_of_birth,
+    (YEAR(v.first_shot) - p.year_of_birth) AS age_at_vaccination
+FROM Vaccine_first_group_2 v
+LEFT JOIN person_1 p ON v.person_id = p.person_id
+WHERE p.year_of_birth IS NOT NULL
+  AND (YEAR(v.first_shot) - p.year_of_birth) >= 18
+GROUP BY v.person_id, p.year_of_birth
+ORDER BY v.person_id;
+
+-- =============================================================================
+-- PART 4: Add GBS Outcome Flags to Vaccine First Cohort
+-- =============================================================================
+@transform_pandas(
+    Output(rid="ri.foundry.main.dataset.054a420c-e54f-4dbd-a27c-6bfe00ac0e89"),
+    GBS_Vaccine_group=Input(rid="ri.foundry.main.dataset.54d0d787-6a81-44c3-b49a-374e15651bf2"),
+    Vaccine_first_group_2=Input(rid="ri.foundry.main.dataset.71b4b89c-151d-4b8c-82d2-575e56cb3ca5")
+)
+-- Add has_GBS flag and GBS start date to vaccine-first cohort
+SELECT DISTINCT 
+    i.*,
+    CASE WHEN g.person_id IS NOT NULL THEN 1 ELSE 0 END AS has_GBS,
+    g.first_condition_start_date AS GBS_start_date
+FROM Vaccine_first_group_2 i
+LEFT JOIN GBS_Vaccine_group g ON g.person_id = i.person_id;
