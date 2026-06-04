@@ -1,6 +1,6 @@
 /*
 ================================================================================
-File: 04_General_Exams_Extraction.sql
+File: General_Exams_Extraction.sql
 Description: Extract general wellness exams and physical examinations
 Input: procedure_occurrence
 Output: General_exam (RID: ri.foundry.main.dataset.851fc4e4-5484-4afd-91a1-bcc69af12be0)
