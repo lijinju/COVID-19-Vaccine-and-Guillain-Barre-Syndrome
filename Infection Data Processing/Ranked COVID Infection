@@ -1,0 +1,33 @@
+/*
+================================================================================
+File: 03_COVID_Infection_Extraction.sql
+Description: Extract COVID-19 infection dates with multiple episodes (1st-5th infections)
+Input: pre_covid_infection (dataset with person_id and date of positive test)
+Output: all_infection_fact (person_id with first_infection_date, second_infection_date, etc.)
+================================================================================
+*/
+
+@transform_pandas(
+    Output(rid="ri.foundry.main.dataset.ffc7413c-a348-43cb-a4c1-e0a59d876088"),
+    pre_covid_infection=Input(rid="ri.foundry.main.dataset.051e1ecc-3dc1-429c-bb94-728701be621a")
+)
+
+WITH RankedInfections AS (
+    SELECT DISTINCT
+        person_id,
+        date AS infection_date,
+        ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY date ASC NULLS LAST) AS infection_rank
+    FROM pre_covid_infection
+    WHERE date >= '2020-12-11'  -- Only include infections after vaccine rollout
+)
+SELECT
+    person_id,
+    MAX(CASE WHEN infection_rank = 1 THEN infection_date ELSE NULL END) AS first_infection_date,
+    MAX(CASE WHEN infection_rank = 2 THEN infection_date ELSE NULL END) AS second_infection_date,
+    MAX(CASE WHEN infection_rank = 3 THEN infection_date ELSE NULL END) AS third_infection_date,
+    MAX(CASE WHEN infection_rank = 4 THEN infection_date ELSE NULL END) AS fourth_infection_date,
+    MAX(CASE WHEN infection_rank = 5 THEN infection_date ELSE NULL END) AS fifth_infection_date
+FROM RankedInfections
+GROUP BY person_id
+HAVING first_infection_date IS NOT NULL  
+ORDER BY person_id;
