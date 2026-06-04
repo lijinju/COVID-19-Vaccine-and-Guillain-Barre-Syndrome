@@ -10,11 +10,6 @@ Output: Vaccine_first_cohort_full, Vaccine_first_group_2, Vaccine_first_cohort_a
 -- =============================================================================
 -- PART 1: Base Vaccine First Cohort Definition (First Dose)
 -- =============================================================================
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.bce9a01e-3aae-4d5b-9ffa-00d831e99293"),
-    all_infection_fact=Input(rid="ri.foundry.main.dataset.f9bde5dc-120d-40ba-97b6-022835d8aafa"),
-    all_vaccine_fact=Input(rid="ri.foundry.main.dataset.5d91ed14-c550-4062-9494-a0671f8323ea")
-)
 -- Vaccine first cohort: People vaccinated BEFORE infection (or never infected)
 -- Reference date: 2020-12-11 (vaccine rollout start)
 --
@@ -63,10 +58,7 @@ WHERE (i.first_infection_date > v.first_shot OR i.person_id IS NULL)
 -- =============================================================================
 -- PART 2: Extract Distinct Person IDs for Vaccine First Cohort
 -- =============================================================================
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.71b4b89c-151d-4b8c-82d2-575e56cb3ca5"),
-    Vaccine_first_cohort_full=Input(rid="ri.foundry.main.dataset.bce9a01e-3aae-4d5b-9ffa-00d831e99293")
-)
+
 -- Extract distinct person_ids with their first vaccine date
 SELECT DISTINCT 
     person_id, 
@@ -77,11 +69,7 @@ WHERE vaccine_first_group = 1;
 -- =============================================================================
 -- PART 3: Age Filter (>= 18 years at time of vaccination)
 -- =============================================================================
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.d5d8a5c9-80ce-4bbc-a425-96f38f3abaf4"),
-    Vaccine_first_group_2=Input(rid="ri.foundry.main.dataset.71b4b89c-151d-4b8c-82d2-575e56cb3ca5"),
-    person_1=Input(rid="ri.foundry.main.dataset.af5e5e91-6eeb-4b14-86df-18d84a5aa010")
-)
+
 -- Filter to patients aged >= 18 years at time of first vaccination
 SELECT 
     v.person_id,
@@ -98,11 +86,7 @@ ORDER BY v.person_id;
 -- =============================================================================
 -- PART 4: Add GBS Outcome Flags to Vaccine First Cohort
 -- =============================================================================
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.054a420c-e54f-4dbd-a27c-6bfe00ac0e89"),
-    GBS_Vaccine_group=Input(rid="ri.foundry.main.dataset.54d0d787-6a81-44c3-b49a-374e15651bf2"),
-    Vaccine_first_group_2=Input(rid="ri.foundry.main.dataset.71b4b89c-151d-4b8c-82d2-575e56cb3ca5")
-)
+
 -- Add has_GBS flag and GBS start date to vaccine-first cohort
 SELECT DISTINCT 
     i.*,
