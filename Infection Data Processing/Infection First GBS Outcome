@@ -1,6 +1,6 @@
 /*
 ================================================================================
-File: 09_GBS_Outcome_Flagging.sql (Infection First Section)
+File: GBS_Outcome_Flagging.sql (Infection First Section)
 Description: Add GBS outcome flags and start dates to infection-first cohort
 Input: GBS_infection_group, Infection_first_group_2
 Output: GBS_IG_outcome_2
