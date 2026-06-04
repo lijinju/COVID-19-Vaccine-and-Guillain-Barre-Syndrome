@@ -1,0 +1,33 @@
+@transform_pandas(
+    Output(rid="ri.foundry.main.dataset.3289c83e-15c8-496f-9406-05d0132ecd8a"),
+    Pre_covid_vaccine_all_record=Input(rid="ri.foundry.main.dataset.854179e7-c862-4657-a89b-9537f6c78e85"),
+    all_vaccine_fact=Input(rid="ri.foundry.main.dataset.5d91ed14-c550-4062-9494-a0671f8323ea")
+)
+-- Add vaccine type classification (Pfizer, Moderna, J&J, Unknown)
+SELECT *
+FROM (
+    SELECT *,
+        ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY CASE WHEN vac_type = 'Unknown' THEN 2 ELSE 1 END) AS row_num
+    FROM (
+        SELECT DISTINCT 
+            a.person_id, 
+            a.first_shot, 
+            a.second_shot, 
+            a.third_shot,
+            a.fourth_shot,
+            a.fifth_shot,
+            b.drug_exposure_id, 
+            b.drug_concept_name, 
+            b.drug_concept_id,
+            CASE 
+                WHEN drug_concept_name LIKE '%BNT162b2%' THEN 'Pfizer'
+                WHEN drug_concept_name LIKE '%1273%' THEN 'Moderna'
+                WHEN drug_concept_name LIKE '%vector%' THEN 'J&J' 
+                ELSE 'Unknown' 
+            END AS vac_type
+        FROM all_vaccine_fact a
+        JOIN Pre_covid_vaccine_all_record b ON a.person_id = b.person_id
+        WHERE a.first_shot = b.drug_exposure_start_date
+    ) subquery
+) AS ranked_subquery
+WHERE row_num = 1;
