@@ -2,13 +2,11 @@
 ================================================================================
 File: Define_Vaccine_First_Cohort.sql
 Description: Define cohort of people vaccinated BEFORE infection (or never infected)
-Input: all_vaccine_fact, all_infection_fact, person_1
-Output: Vaccine_first_cohort_full, Vaccine_first_group_2, Vaccine_first_cohort_age_filtered
 ================================================================================
 */
 
 -- =============================================================================
--- PART 1: Base Vaccine First Cohort Definition (First Dose)
+-- Base Vaccine First Cohort Definition (First Dose)
 -- =============================================================================
 -- Vaccine first cohort: People vaccinated BEFORE infection (or never infected)
 -- Reference date: 2020-12-11 (vaccine rollout start)
@@ -56,7 +54,7 @@ WHERE (i.first_infection_date > v.first_shot OR i.person_id IS NULL)
   AND v.first_shot IS NOT NULL;
 
 -- =============================================================================
--- PART 2: Extract Distinct Person IDs for Vaccine First Cohort
+-- Extract Distinct Person IDs for Vaccine First Cohort
 -- =============================================================================
 
 -- Extract distinct person_ids with their first vaccine date
@@ -67,7 +65,7 @@ FROM Vaccine_first_cohort_full
 WHERE vaccine_first_group = 1;
 
 -- =============================================================================
--- PART 3: Age Filter (>= 18 years at time of vaccination)
+-- Age Filter (>= 18 years at time of vaccination)
 -- =============================================================================
 
 -- Filter to patients aged >= 18 years at time of first vaccination
@@ -84,7 +82,7 @@ GROUP BY v.person_id, p.year_of_birth
 ORDER BY v.person_id;
 
 -- =============================================================================
--- PART 4: Add GBS Outcome Flags to Vaccine First Cohort
+-- Add GBS Outcome Flags to Vaccine First Cohort
 -- =============================================================================
 
 -- Add has_GBS flag and GBS start date to vaccine-first cohort

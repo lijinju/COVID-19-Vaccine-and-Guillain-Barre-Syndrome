@@ -2,8 +2,6 @@
 ================================================================================
 File: Build_Pre_Infection_Raw.py
 Description: Build raw COVID-19 infection records from measurement and condition domains
-Input: condition_occurrence, measurement
-Output: pre_covid_infection (RID: ri.foundry.main.dataset.051e1ecc-3dc1-429c-bb94-728701be621a)
 ================================================================================
 """
 

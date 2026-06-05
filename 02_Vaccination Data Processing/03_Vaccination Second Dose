@@ -2,8 +2,6 @@
 ================================================================================
 File: Vaccination_Fact_SecondDose.sql
 Description: Build vaccination fact table focused on second dose analysis
-Input: Pre_covid_vaccine_all_record
-Output: vaccine_fact_second_dose
 ================================================================================
 */
 

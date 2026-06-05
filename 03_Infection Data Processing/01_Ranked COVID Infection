@@ -2,8 +2,6 @@
 ================================================================================
 File: COVID_Infection_Extraction.sql
 Description: Extract COVID-19 infection dates with multiple episodes (1st-5th infections)
-Input: pre_covid_infection (dataset with person_id and date of positive test)
-Output: all_infection_fact (person_id with first_infection_date, second_infection_date, etc.)
 ================================================================================
 */
 

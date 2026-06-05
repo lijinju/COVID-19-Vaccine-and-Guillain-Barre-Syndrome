@@ -1,8 +1,6 @@
 ================================================================================
 File: GBS_Cases_Extraction.sql
 Description: Extract all Guillain-Barré Syndrome patients from condition_occurrence
-Input: condition_occurrence (RID: ri.foundry.main.dataset.526c0452-7c18-46b6-8a5d-59be0b79a10b)
-Output: GBS_ALL (RID: ri.foundry.main.dataset.d8e6fa28-ed1a-4672-87c4-5eb4f2edb1c7)
 ================================================================================
 */
 

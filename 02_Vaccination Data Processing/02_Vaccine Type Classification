@@ -2,9 +2,7 @@
 ================================================================================
 File: Classify_Vaccine_Types.sql
 Description: Add vaccine type classification (Pfizer, Moderna, J&J, Unknown)
-Input: all_vaccine_fact, Pre_covid_vaccine_all_record
-Output: vaccine_fact_with_types (RID: ri.foundry.main.dataset.3289c83e-15c8-496f-9406-05d0132ecd8a)
-================================================================================
+==============================================================================
 */
 
 

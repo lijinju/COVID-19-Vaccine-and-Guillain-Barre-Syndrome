@@ -2,8 +2,6 @@
 ================================================================================
 File: Extract_Well_Visits.sql
 Description: Extract well-check / preventive care / physical exam visits
-Input: procedure_occurrence
-Output: well_visits (RID: ri.foundry.main.dataset.4fb8bda7-fd80-4e1d-992b-ea2753f24a4f)
 ================================================================================
 */
 

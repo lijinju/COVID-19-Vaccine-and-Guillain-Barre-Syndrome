@@ -1,8 +1,6 @@
 ================================================================================
 File: Define_Infection_First_Cohort.sql
 Description: Define cohort of people infected BEFORE vaccination (or never vaccinated)
-Input: all_infection_fact, all_vaccine_fact, person_1
-Output: Infection_first_cohort_full, Infection_first_group_2, Infection_first_cohort_age_filtered
 ================================================================================
 */
 

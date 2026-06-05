@@ -1,0 +1,160 @@
+/*
+================================================================================
+Define_Vaccine_Infection_Combined.sql
+Description: Define combined cohort of patients with BOTH vaccine AND infection
+             (Vaccination Infection Group - VIG)
+================================================================================
+*/
+
+-- =============================================================================
+-- Extract GBS Outcome for Vaccine-Infection Combined Group
+-- =============================================================================
+
+-- Add has_GBS flag and GBS start date to vaccine-infection combined cohort
+
+SELECT DISTINCT 
+    i.*,
+    CASE WHEN g.person_id IS NOT NULL THEN 1 ELSE 0 END AS has_GBS,
+    g.first_condition_start_date AS GBS_start_date
+FROM Infection_vaccine_first_2 i
+LEFT JOIN GBS_vaccine_infection1 g ON g.person_id = i.person_id;
+
+-- =============================================================================
+-- Define Queue Group for Vaccine-Infection Combined (Group 4)
+-- =============================================================================
+
+-- Queue group definitions for all four groups
+-- Group 1: Vaccination first
+-- Group 2: Infection first
+-- Group 3: Visit first (negative control)
+-- Group 4: Vaccination infection combined (BOTH vaccine AND infection)
+
+WITH death_clean AS (
+    SELECT 
+        person_id, 
+        MAX(death_date) AS Death_date, 
+        1 AS death_fact
+    FROM death
+    GROUP BY person_id
+)
+
+-- ===== GROUP 1: VACCINATION FIRST (using first_shot) =====
+SELECT 
+    1 AS group_id, 
+    'vaccination_first' AS group_name, 
+    v.person_id,
+    first_shot AS time_zero,
+    DATE_ADD(first_shot, 30) AS time_end, 
+    CASE 
+        WHEN has_GBS = 1 THEN DATEDIFF(GBS_start_date, first_shot) 
+        ELSE 30 
+    END AS GBS_interval, 
+    has_GBS, 
+    GBS_start_date, 
+    d.Death_date AS death_date,
+    CASE WHEN death_fact = 1 THEN TRUE ELSE FALSE END AS death,
+    CASE WHEN DATEDIFF(Death_date, first_shot) <= 30 THEN 1 ELSE 0 END AS death_in_30days,
+    CASE WHEN Death_date IS NULL AND death_fact = 1 THEN TRUE ELSE FALSE END AS missing_death_date
+FROM GBS_VG_outcome v
+LEFT JOIN death_clean d ON v.person_id = d.person_id
+
+UNION ALL
+
+-- ===== GROUP 2: INFECTION FIRST =====
+SELECT 
+    2 AS group_id, 
+    'infection_first' AS group_name, 
+    i.person_id,
+    first_infection_date AS time_zero,
+    DATE_ADD(first_infection_date, 30) AS time_end, 
+    CASE 
+        WHEN has_GBS = 1 THEN DATEDIFF(GBS_start_date, first_infection_date) 
+        ELSE 30 
+    END AS GBS_interval, 
+    has_GBS, 
+    GBS_start_date,
+    Death_date AS death_date, 
+    CASE WHEN death_fact = 1 THEN TRUE ELSE FALSE END AS death,
+    CASE WHEN DATEDIFF(Death_date, first_infection_date) <= 30 THEN 1 ELSE 0 END AS death_in_30days,
+    CASE WHEN Death_date IS NULL AND death_fact = 1 THEN TRUE ELSE FALSE END AS missing_death_date
+FROM GBS_IG_outcome_2 i
+LEFT JOIN death_clean d ON i.person_id = d.person_id
+
+UNION ALL
+
+-- ===== GROUP 3: VISIT FIRST (NEGATIVE CONTROL) =====
+SELECT 
+    3 AS group_id, 
+    'visit_first' AS group_name, 
+    j.person_id,
+    first_visit AS time_zero,
+    DATE_ADD(first_visit, 30) AS time_end, 
+    CASE 
+        WHEN has_GBS = 1 THEN DATEDIFF(GBS_start_date, first_visit) 
+        ELSE 30 
+    END AS GBS_interval, 
+    has_GBS, 
+    GBS_start_date,
+    Death_date AS death_date, 
+    CASE WHEN death_fact = 1 THEN TRUE ELSE FALSE END AS death,
+    CASE WHEN DATEDIFF(Death_date, first_visit) <= 30 THEN 1 ELSE 0 END AS death_in_30days,
+    CASE WHEN Death_date IS NULL AND death_fact = 1 THEN TRUE ELSE FALSE END AS missing_death_date
+FROM GBS_NG_outcome j
+LEFT JOIN death_clean d ON j.person_id = d.person_id
+
+UNION ALL
+
+-- ===== GROUP 4: VACCINATION INFECTION COMBINED (BOTH) =====
+SELECT 
+    4 AS group_id, 
+    'vaccination_infection' AS group_name, 
+    vig.person_id,
+    first_infection_date AS time_zero,
+    DATE_ADD(first_infection_date, 30) AS time_end, 
+    CASE 
+        WHEN has_GBS = 1 THEN DATEDIFF(GBS_start_date, first_infection_date) 
+        ELSE 30 
+    END AS GBS_interval, 
+    has_GBS, 
+    GBS_start_date,
+    Death_date AS death_date, 
+    CASE WHEN death_fact = 1 THEN TRUE ELSE FALSE END AS death,
+    CASE WHEN DATEDIFF(Death_date, first_infection_date) <= 30 THEN 1 ELSE 0 END AS death_in_30days,
+    CASE WHEN Death_date IS NULL AND death_fact = 1 THEN TRUE ELSE FALSE END AS missing_death_date
+FROM GBS_VIG_outcome vig
+LEFT JOIN death_clean d ON vig.person_id = d.person_id;
+
+
+-- =============================================================================
+-- Queue Group for Vaccine-Infection Combined with Second Dose
+-- =============================================================================
+
+-- Combined group using SECOND VACCINE DOSE as index
+
+WITH death_clean AS (
+    SELECT person_id, MAX(death_date) AS Death_date, 1 AS death_fact
+    FROM death
+    GROUP BY person_id
+)
+
+SELECT 
+    5 AS group_id, 
+    'vaccination_infection_second_dose' AS group_name, 
+    vig.person_id,
+    v.second_shot AS time_zero,  -- Using second dose as index
+    DATE_ADD(v.second_shot, 30) AS time_end, 
+    CASE 
+        WHEN vig.has_GBS = 1 THEN DATEDIFF(vig.GBS_start_date, v.second_shot) 
+        ELSE 30 
+    END AS GBS_interval, 
+    vig.has_GBS, 
+    vig.GBS_start_date,
+    d.Death_date, 
+    CASE WHEN d.death_fact = 1 THEN TRUE ELSE FALSE END AS death,
+    CASE WHEN DATEDIFF(d.Death_date, v.second_shot) <= 30 THEN 1 ELSE 0 END AS death_in_30days,
+    CASE WHEN d.Death_date IS NULL AND d.death_fact = 1 THEN TRUE ELSE FALSE END AS missing_death_date
+FROM GBS_VIG_outcome vig
+INNER JOIN all_vaccine_fact v ON vig.person_id = v.person_id
+LEFT JOIN death_clean d ON vig.person_id = d.person_id
+WHERE v.second_shot IS NOT NULL
+  AND (vig.has_GBS = 0 OR vig.GBS_start_date > v.second_shot);
