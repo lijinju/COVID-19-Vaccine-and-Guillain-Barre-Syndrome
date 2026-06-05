@@ -1,7 +1,7 @@
 """
 ================================================================================
-File: Build_Pre_Infection_Raw.py
-Description: Build raw COVID-19 infection records from measurement and condition domains
+File: Build_COVID_Infection_Raw.py
+Description: Build COVID-19 infection records from measurement and condition domains
 ================================================================================
 """
 

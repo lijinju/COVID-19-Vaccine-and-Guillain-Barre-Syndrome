@@ -7,19 +7,6 @@ Description: Define combined cohort of patients with BOTH vaccine AND infection
 */
 
 -- =============================================================================
--- Extract GBS Outcome for Vaccine-Infection Combined Group
--- =============================================================================
-
--- Add has_GBS flag and GBS start date to vaccine-infection combined cohort
-
-SELECT DISTINCT 
-    i.*,
-    CASE WHEN g.person_id IS NOT NULL THEN 1 ELSE 0 END AS has_GBS,
-    g.first_condition_start_date AS GBS_start_date
-FROM Infection_vaccine_first_2 i
-LEFT JOIN GBS_vaccine_infection1 g ON g.person_id = i.person_id;
-
--- =============================================================================
 -- Define Queue Group for Vaccine-Infection Combined (Group 4)
 -- =============================================================================
 

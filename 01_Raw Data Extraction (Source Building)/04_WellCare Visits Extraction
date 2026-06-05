@@ -6,8 +6,8 @@ Description: Extract well-check / preventive care / physical exam visits
 */
 
 
--- Extract well-check visits, preventive care, physical examinations
--- Concept IDs include: routine physicals, wellness checks, preventive visits
+-- Extract well-check visits
+
 
 SELECT 
     person_id,
@@ -37,7 +37,4 @@ WHERE procedure_concept_id IN (
     4094040, 45465582, 3243797, 45482311, 4094041, 40310831, 45913322, 45918129, 
     45953355, 3144773, 4091831, 45469041, 3059601, 3343802, 45462197
 )
--- Also include concepts with 'Well' in the name
-OR LOWER(procedure_concept_name) LIKE '%well%'
-   AND procedure_concept_name NOT LIKE '%covid%'
-   AND procedure_concept_name NOT LIKE '%vaccine%';
+

@@ -5,7 +5,6 @@ Description: Define cohort of people infected BEFORE vaccination (or never vacci
 ================================================================================
 */
 
-
 -- Infection first cohort: People infected BEFORE vaccination (or no vaccine)
 -- Reference date: 2020-12-11
 
