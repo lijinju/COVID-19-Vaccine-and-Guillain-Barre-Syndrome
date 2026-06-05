@@ -35,17 +35,6 @@ SELECT
               AND DATEDIFF(i.first_infection_date, v.first_shot) < 30) THEN 1
         ELSE 0
     END AS infection_within_30,
-    
-    -- TIMING CATEGORIES for stratified analysis
-    CASE 
-        WHEN i.person_id IS NULL THEN 'No_Infection'
-        WHEN DATEDIFF(i.first_infection_date, v.first_shot) <= 0 THEN 'Infection_Before_Vaccine'
-        WHEN DATEDIFF(i.first_infection_date, v.first_shot) BETWEEN 1 AND 29 THEN 'Infection_Within_30_Days'
-        WHEN DATEDIFF(i.first_infection_date, v.first_shot) BETWEEN 30 AND 59 THEN 'Infection_30-60_Days'
-        WHEN DATEDIFF(i.first_infection_date, v.first_shot) BETWEEN 60 AND 89 THEN 'Infection_60-90_Days'
-        WHEN DATEDIFF(i.first_infection_date, v.first_shot) >= 90 THEN 'Infection_90+_Days'
-        ELSE 'Other'
-    END AS infection_timing_category
 
 FROM all_vaccine_fact v
 LEFT JOIN all_infection_fact i ON v.person_id = i.person_id 
