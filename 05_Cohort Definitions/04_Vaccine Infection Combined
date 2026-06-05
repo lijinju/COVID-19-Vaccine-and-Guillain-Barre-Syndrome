@@ -22,7 +22,7 @@ Output: infection_by_vaccine_status, infection_vaccinated_queue, infection_unvac
 -- Extract all infections with dates
 -- =============================================================================
 
--- Get all infection episodes (first, second, third infections)
+-- Get all infection episodes (first infections)
 
 SELECT 
     person_id,
