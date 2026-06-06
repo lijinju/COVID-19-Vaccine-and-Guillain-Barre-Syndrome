@@ -6,7 +6,6 @@ Description: Extract COVID-19 vaccination records from drug_exposure
 ================================================================================
 */
 
-
 WITH covid_vaccine_concepts AS (
     SELECT *
     FROM concept

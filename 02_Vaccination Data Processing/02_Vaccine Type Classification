@@ -23,7 +23,6 @@ FROM (
             a.total_shots,
             a.first_second_less_than_30,
             a.first_third_less_than_30,
-            b.drug_exposure_id, 
             b.drug_concept_name, 
             b.drug_concept_id,
             

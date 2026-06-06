@@ -6,7 +6,6 @@ Description: Build vaccination fact table focused on second dose analysis
 */
 
 
-
 WITH RankedVaccinations AS (
     SELECT
         person_id,
