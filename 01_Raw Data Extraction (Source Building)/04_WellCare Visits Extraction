@@ -5,9 +5,7 @@ Description: Extract well-check / preventive care / physical exam visits
 ================================================================================
 */
 
-
 -- Extract well-check visits
-
 
 SELECT 
     person_id,
