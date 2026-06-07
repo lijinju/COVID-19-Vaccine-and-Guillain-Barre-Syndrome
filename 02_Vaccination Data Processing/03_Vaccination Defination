@@ -10,13 +10,7 @@
 --   - Excludes patients with infection within 30 days post-vaccination (risk period)
 -- ============================================================================
 
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.32164ea6-9610-43d0-9acd-edd4692e2e66"),
-    all_infection_fact=Input(rid="ri.foundry.main.dataset.ffc7413c-a348-43cb-a4c1-e0a59d876088"),
-    all_vaccine_fact=Input(rid="ri.foundry.main.dataset.8e1971a5-adb1-4748-a98a-c367ce23d885")
-)
--- Vaccine first group: Vaccination before infection since 2020-12-11
--- Excludes infections within 30 days post-vaccination
+
 
 SELECT
     v.person_id,

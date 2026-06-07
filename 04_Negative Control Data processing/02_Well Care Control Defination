@@ -7,19 +7,17 @@
 -- Inclusion Criteria:
 --   - First wellness visit date < first vaccine dose date (or no vaccine ever)
 --   - First wellness visit date < first infection date (or no infection ever)
+--   - No vaccine dose within 30 days AFTER the visit
+--   - No infection within 30 days AFTER the visit
 --   - Visit date >= 2020-12-11
 -- ============================================================================
 
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.faff0a6e-126d-4f93-a577-384bfa948598"),
-    all_infection_fact=Input(rid="ri.foundry.main.dataset.ffc7413c-a348-43cb-a4c1-e0a59d876088"),
-    all_vaccine_fact=Input(rid="ri.foundry.main.dataset.8e1971a5-adb1-4748-a98a-c367ce23d885"),
-    unique_exam_after2020=Input(rid="ri.foundry.main.dataset.cf545c22-bc6b-4ee5-92a3-3896fcac8154")
-)
+
 
 SELECT DISTINCT
     e.person_id,
-    e.first_visit,
+    e.first_visit AS time_zero,
+    DATE_ADD(e.first_visit, 30) AS time_end,
     v.first_shot,
     i.first_infection_date,
     
@@ -43,10 +41,27 @@ SELECT DISTINCT
         ELSE 0
     END AS visit_before_infection,
     
-    -- Combined flag: Clean control group (no prior vaccine AND no prior infection)
+    -- Flag: No vaccine within 30 days AFTER visit
+    CASE 
+        WHEN v.first_shot IS NULL THEN 1
+        WHEN DATEDIFF(v.first_shot, e.first_visit) > 30 THEN 1
+        ELSE 0
+    END AS no_vaccine_within_30days_followup,
+    
+    -- Flag: No infection within 30 days AFTER visit
+    CASE 
+        WHEN i.first_infection_date IS NULL THEN 1
+        WHEN DATEDIFF(i.first_infection_date, e.first_visit) > 30 THEN 1
+        ELSE 0
+    END AS no_infection_within_30days_followup,
+    
+    -- Combined flag: Clean control group
+    -- (no prior vaccine, no prior infection, no vaccine/infection during 30-day follow-up)
     CASE 
         WHEN (v.first_shot IS NULL OR e.first_visit < v.first_shot)
          AND (i.first_infection_date IS NULL OR e.first_visit < i.first_infection_date)
+         AND (v.first_shot IS NULL OR DATEDIFF(v.first_shot, e.first_visit) > 30)
+         AND (i.first_infection_date IS NULL OR DATEDIFF(i.first_infection_date, e.first_visit) > 30)
         THEN 1
         ELSE 0
     END AS clean_control_group
@@ -59,4 +74,7 @@ LEFT JOIN all_infection_fact i
 WHERE e.first_visit >= '2020-12-11'
   AND (v.first_shot IS NULL OR e.first_visit < v.first_shot)
   AND (i.first_infection_date IS NULL OR e.first_visit < i.first_infection_date)
+  AND (v.first_shot IS NULL OR DATEDIFF(v.first_shot, e.first_visit) > 30)
+  AND (i.first_infection_date IS NULL OR DATEDIFF(i.first_infection_date, e.first_visit) > 30)
 ORDER BY e.person_id;
+
