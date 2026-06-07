@@ -1,0 +1,62 @@
+-- ============================================================================
+-- unique_exam_wo_both.sql
+-- Description: Wellness visit cohort with NO prior vaccination AND NO prior infection
+-- Index date = first wellness visit that occurs BEFORE any vaccine AND BEFORE any infection
+-- This serves as a clean control group
+-- ============================================================================
+-- Inclusion Criteria:
+--   - First wellness visit date < first vaccine dose date (or no vaccine ever)
+--   - First wellness visit date < first infection date (or no infection ever)
+--   - Visit date >= 2020-12-11
+-- ============================================================================
+
+@transform_pandas(
+    Output(rid="ri.foundry.main.dataset.faff0a6e-126d-4f93-a577-384bfa948598"),
+    all_infection_fact=Input(rid="ri.foundry.main.dataset.ffc7413c-a348-43cb-a4c1-e0a59d876088"),
+    all_vaccine_fact=Input(rid="ri.foundry.main.dataset.8e1971a5-adb1-4748-a98a-c367ce23d885"),
+    unique_exam_after2020=Input(rid="ri.foundry.main.dataset.cf545c22-bc6b-4ee5-92a3-3896fcac8154")
+)
+
+SELECT DISTINCT
+    e.person_id,
+    e.first_visit,
+    v.first_shot,
+    i.first_infection_date,
+    
+    -- Days between visit and vaccination (negative = visit before vaccine)
+    DATEDIFF(e.first_visit, v.first_shot) AS days_to_vaccine,
+    
+    -- Days between visit and infection (negative = visit before infection)
+    DATEDIFF(e.first_visit, i.first_infection_date) AS days_to_infection,
+    
+    -- Flag: Visit occurs BEFORE any vaccination
+    CASE 
+        WHEN v.first_shot IS NULL THEN 1
+        WHEN e.first_visit < v.first_shot THEN 1
+        ELSE 0
+    END AS visit_before_vaccine,
+    
+    -- Flag: Visit occurs BEFORE any infection
+    CASE 
+        WHEN i.first_infection_date IS NULL THEN 1
+        WHEN e.first_visit < i.first_infection_date THEN 1
+        ELSE 0
+    END AS visit_before_infection,
+    
+    -- Combined flag: Clean control group (no prior vaccine AND no prior infection)
+    CASE 
+        WHEN (v.first_shot IS NULL OR e.first_visit < v.first_shot)
+         AND (i.first_infection_date IS NULL OR e.first_visit < i.first_infection_date)
+        THEN 1
+        ELSE 0
+    END AS clean_control_group
+
+FROM unique_exam_after2020 e
+LEFT JOIN all_vaccine_fact v 
+    ON e.person_id = v.person_id
+LEFT JOIN all_infection_fact i 
+    ON e.person_id = i.person_id
+WHERE e.first_visit >= '2020-12-11'
+  AND (v.first_shot IS NULL OR e.first_visit < v.first_shot)
+  AND (i.first_infection_date IS NULL OR e.first_visit < i.first_infection_date)
+ORDER BY e.person_id;
