@@ -1,7 +1,8 @@
 /*
 ================================================================================
 File: Extract_Well_Visits.sql
-Description: Extract well-check / preventive care / physical exam visits
+Description: to form the file wellness_visits_after2020 to form the file 
+            wellness_visits_after2020
 ================================================================================
 */
 

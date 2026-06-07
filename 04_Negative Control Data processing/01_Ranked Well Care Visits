@@ -2,7 +2,6 @@
 -- Ranked Wellness Visit Per Person 
 -- =============================================================================
 
-
 WITH RankedVisits AS (
     SELECT
         person_id,

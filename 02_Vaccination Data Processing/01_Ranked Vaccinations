@@ -1,5 +1,17 @@
-
--- Vaccination rank: first 5 shots with intervals
+-- ============================================================================
+-- all_vaccine_fact.sql
+-- Description: Extracts COVID-19 vaccination history for each patient
+-- Captures first 5 vaccine doses with dates and calculates intervals
+-- ============================================================================
+-- Output Columns:
+--   - person_id: Unique patient identifier
+--   - first_shot: Date of first vaccine dose
+--   - second_shot: Date of second vaccine dose
+--   - third_shot: Date of third vaccine dose
+--   - fourth_shot: Date of fourth vaccine dose
+--   - fifth_shot: Date of fifth vaccine dose
+--   - total_shots: Total number of vaccine doses received (1-5)
+-- ============================================================================
 
 WITH RankedVaccinations AS (
     SELECT
@@ -11,6 +23,7 @@ WITH RankedVaccinations AS (
         FROM Pre_covid_vaccine_all_record
     )
 )
+
 SELECT 
     person_id,
     MAX(CASE WHEN vaccination_rank = 1 THEN vaccinated_date ELSE NULL END) AS first_shot,
@@ -24,15 +37,7 @@ SELECT
         (CASE WHEN MAX(CASE WHEN vaccination_rank = 3 THEN vaccinated_date ELSE NULL END) IS NOT NULL THEN 1 ELSE 0 END) +
         (CASE WHEN MAX(CASE WHEN vaccination_rank = 4 THEN vaccinated_date ELSE NULL END) IS NOT NULL THEN 1 ELSE 0 END) +
         (CASE WHEN MAX(CASE WHEN vaccination_rank = 5 THEN vaccinated_date ELSE NULL END) IS NOT NULL THEN 1 ELSE 0 END) AS VARCHAR(3)
-    ) AS total_shots,
-    CASE 
-        WHEN DATEDIFF(second_shot, first_shot) BETWEEN 1 AND 29 THEN 1 
-        ELSE 0 
-    END AS first_second_less_than_30,
-    CASE 
-        WHEN DATEDIFF(third_shot, first_shot) BETWEEN 1 AND 29 THEN 1 
-        ELSE 0 
-    END AS first_third_less_than_30
+    ) AS total_shots
 FROM RankedVaccinations
 GROUP BY person_id
 HAVING first_shot IS NOT NULL

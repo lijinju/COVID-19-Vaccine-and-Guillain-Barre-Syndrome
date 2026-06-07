@@ -2,7 +2,7 @@
 ================================================================================
 File: COVID_Vaccine_Extraction.sql
 Description: Extract COVID-19 vaccination records from drug_exposure
-
+             to form the file Pre_covid_vaccine_all_record
 ================================================================================
 */
 

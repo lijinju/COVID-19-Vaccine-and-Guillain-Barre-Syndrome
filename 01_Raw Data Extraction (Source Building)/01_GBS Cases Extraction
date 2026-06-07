@@ -1,6 +1,8 @@
+/*
 ================================================================================
 File: GBS_Cases_Extraction.sql
 Description: Extract all Guillain-Barré Syndrome patients from condition_occurrence
+             to form the file GBS_ALL
 ================================================================================
 */
 

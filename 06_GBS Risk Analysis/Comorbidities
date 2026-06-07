@@ -1,0 +1,91 @@
+
+-- =====================================================
+-- Comorbidity Mapping for GBS Risk Analysis
+-- Adds 18 comorbidities to Queue_group
+-- =====================================================
+
+WITH concept_mapping AS (
+    SELECT DISTINCT
+        m.concept_id,
+        CASE
+            WHEN m.codeset_id = 343580642 THEN 1   -- Hypertension
+            WHEN m.codeset_id = 54654297  THEN 2   -- Diabetes mellitus
+            WHEN m.codeset_id = 692484006 THEN 3   -- AKI
+            WHEN m.codeset_id = 709254195 THEN 4   -- Heart failure
+            WHEN m.codeset_id = 904688609 THEN 5   -- Cardiovascular disease
+            WHEN m.codeset_id = 466714408 THEN 6   -- Obesity
+            WHEN m.codeset_id = 782040890 THEN 7   -- Sepsis
+            WHEN m.codeset_id = 728241405 THEN 8   -- Kidney failure
+            WHEN m.codeset_id = 859437885 THEN 9   -- Hypothyroidism
+            WHEN m.codeset_id = 748757884 THEN 10  -- Asthma
+            WHEN m.codeset_id = 814436088 THEN 11  -- COPD
+            WHEN m.codeset_id = 760892073 THEN 12  -- Hyperlipidemia
+            WHEN m.codeset_id = 176728550 THEN 13  -- Coronary artery disease
+            WHEN m.codeset_id = 133438927 THEN 14  -- Stroke
+            WHEN m.codeset_id = 76546487  THEN 15  -- Cancer
+            WHEN m.codeset_id = 446493410 THEN 16  -- Leukemia
+            WHEN m.codeset_id = 464777695 THEN 17  -- Neurological disorder
+            WHEN m.codeset_id = 595378384 THEN 18  -- Autoimmune disease
+        END AS group_number
+    FROM concept_set_members m
+    WHERE m.codeset_id IN (
+        343580642, 54654297, 692484006, 709254195, 904688609,
+        466714408, 782040890, 728241405, 859437885, 748757884,
+        814436088, 760892073, 176728550, 133438927, 76546487,
+        446493410, 464777695, 595378384
+    )
+),
+
+ConditionCTE AS (
+    SELECT
+        q.person_id,
+        MAX(CASE WHEN cm.group_number = 1  THEN 1 ELSE 0 END) AS Hypertension,
+        MAX(CASE WHEN cm.group_number = 2  THEN 1 ELSE 0 END) AS Diabetes_mellitus,
+        MAX(CASE WHEN cm.group_number = 3  THEN 1 ELSE 0 END) AS AKI,
+        MAX(CASE WHEN cm.group_number = 4  THEN 1 ELSE 0 END) AS Heart_failure,
+        MAX(CASE WHEN cm.group_number = 5  THEN 1 ELSE 0 END) AS Cardiovascular_disease,
+        MAX(CASE WHEN cm.group_number = 6  THEN 1 ELSE 0 END) AS Obesity,
+        MAX(CASE WHEN cm.group_number = 7  THEN 1 ELSE 0 END) AS Sepsis,
+        MAX(CASE WHEN cm.group_number = 8  THEN 1 ELSE 0 END) AS Kidney_failure,
+        MAX(CASE WHEN cm.group_number = 9  THEN 1 ELSE 0 END) AS Hypothyroidism,
+        MAX(CASE WHEN cm.group_number = 10 THEN 1 ELSE 0 END) AS Asthma,
+        MAX(CASE WHEN cm.group_number = 11 THEN 1 ELSE 0 END) AS COPD,
+        MAX(CASE WHEN cm.group_number = 12 THEN 1 ELSE 0 END) AS Hyperlipidemia,
+        MAX(CASE WHEN cm.group_number = 13 THEN 1 ELSE 0 END) AS Coronary_artery_disease,
+        MAX(CASE WHEN cm.group_number = 14 THEN 1 ELSE 0 END) AS Stroke,
+        MAX(CASE WHEN cm.group_number = 15 THEN 1 ELSE 0 END) AS Cancer,
+        MAX(CASE WHEN cm.group_number = 16 THEN 1 ELSE 0 END) AS Leukemia,
+        MAX(CASE WHEN cm.group_number = 17 THEN 1 ELSE 0 END) AS Neurological_disorder,
+        MAX(CASE WHEN cm.group_number = 18 THEN 1 ELSE 0 END) AS Autoimmune_disease
+    FROM Queue_group q
+    LEFT JOIN condition_occurrence co
+        ON q.person_id = co.person_id
+    LEFT JOIN concept_mapping cm
+        ON co.condition_concept_id = cm.concept_id
+    WHERE co.condition_start_date < q.time_zero
+      AND DATEDIFF(q.time_zero, co.condition_start_date) < 365
+    GROUP BY q.person_id
+)
+
+SELECT 
+    q.*,
+    COALESCE(c.Hypertension, 0) AS Hypertension,
+    COALESCE(c.Diabetes_mellitus, 0) AS Diabetes_mellitus,
+    COALESCE(c.AKI, 0) AS AKI,
+    COALESCE(c.Heart_failure, 0) AS Heart_failure,
+    COALESCE(c.Cardiovascular_disease, 0) AS Cardiovascular_disease,
+    COALESCE(c.Obesity, 0) AS Obesity,
+    COALESCE(c.Sepsis, 0) AS Sepsis,
+    COALESCE(c.Kidney_failure, 0) AS Kidney_failure,
+    COALESCE(c.Hypothyroidism, 0) AS Hypothyroidism,
+    COALESCE(c.Asthma, 0) AS Asthma,
+    COALESCE(c.COPD, 0) AS COPD,
+    COALESCE(c.Hyperlipidemia, 0) AS Hyperlipidemia,
+    COALESCE(c.Coronary_artery_disease, 0) AS Coronary_artery_disease,
+    COALESCE(c.Stroke, 0) AS Stroke,
+    COALESCE(c.Cancer, 0) AS Cancer,
+    COALESCE(c.Leukemia, 0) AS Leukemia,
+    COALESCE(c.Neurological_disorder, 0) AS Neurological_disorder,
+    COALESCE(c.Autoimmune_disease, 0) AS Autoimmune_disease
+FROM Queue_group q
+LEFT JOIN ConditionCTE c ON q.person_id = c.person_id;
