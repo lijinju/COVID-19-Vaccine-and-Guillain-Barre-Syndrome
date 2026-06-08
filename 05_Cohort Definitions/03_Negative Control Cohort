@@ -1,5 +1,5 @@
 -- ============================================================================
--- well_care_visits.sql
+-- Negative control cohort -- well_care_visits.sql
 -- Description: Wellness visit cohort with NO vaccine AND NO infection
 --              within 30 days of the exam visit
 -- ============================================================================
@@ -11,13 +11,11 @@
 -- Input: unique_exam_wo_both (clean control cohort from previous step)
 -- ============================================================================
 
-
 -- ============================================================================
 -- STEP 1: GBS_NG_all
 -- Find all GBS diagnoses within 30 days AFTER first wellness visit
 -- Window: days_between in (0, 30) exclusive
 -- ============================================================================
-
 
 
 SELECT
@@ -119,4 +117,3 @@ SELECT DISTINCT
 FROM unique_exam_wo_both i
 LEFT JOIN GBS_NG_group g
     ON g.person_id = i.person_id;
-    
