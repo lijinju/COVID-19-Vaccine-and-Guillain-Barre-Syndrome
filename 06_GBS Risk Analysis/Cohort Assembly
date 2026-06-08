@@ -1,0 +1,171 @@
+-- ============================================================================
+-- queue_group.sql
+-- Description: Assembles the three comparison groups into one unified cohort
+--              with group labels, index dates, follow-up windows,
+--              GBS outcome flags, and death information
+-- ============================================================================
+-- Group Definitions:
+--   group_id 1 → Vaccination First (time_zero = first_shot)
+--   group_id 2 → Infection First (time_zero = first_infection_date)
+--   group_id 3 → Visit First (time_zero = first_visit)
+-- Follow-up window: time_zero to time_zero + 30 days
+-- ============================================================================
+
+-- ============================================================================
+-- STEP 1: Death preprocessing subquery
+-- Deduplicate death records per patient
+-- Some patients have multiple death_date entries; take MAX to get the most recent
+-- Keep NULL death_dates as NULL (not forced to 0)
+-- ============================================================================
+
+-- Pattern used in every branch:
+-- LEFT JOIN (
+--     SELECT person_id, MAX(death_date) AS Death_date, 1 AS death_fact
+--     FROM death
+--     GROUP BY person_id
+-- ) d ON [group_table].person_id = d.person_id
+
+
+-- ============================================================================
+-- STEP 2: queue_group (UNION of all 3 groups)
+-- Combine vaccine, infection, and visit groups into one table
+-- ============================================================================
+
+
+WITH death_clean AS (
+    SELECT
+        person_id,
+        MAX(death_date) AS Death_date,
+        1 AS death_fact
+    FROM death
+    GROUP BY person_id
+)
+
+-- Branch 1: Vaccination First Group (group_id = 1)
+-- time_zero = first_shot
+SELECT
+    1 AS group_id,
+    'vaccination first' AS group_name,
+    v.person_id,
+    first_shot AS time_zero,
+    DATE_ADD(first_shot, 30) AS time_end,
+    CASE
+        WHEN has_GBS = 1 THEN DATEDIFF(GBS_start_date, first_shot)
+        ELSE 30
+    END AS GBS_interval,
+    has_GBS,
+    GBS_start_date,
+    d.Death_date AS death_date,
+    CASE WHEN death_fact = 1 THEN TRUE ELSE FALSE END AS death,
+    CASE WHEN DATEDIFF(Death_date, first_shot) <= 30 THEN 1 ELSE 0 END AS death_in_30days,
+    CASE WHEN Death_date IS NULL AND death_fact = 1 THEN TRUE ELSE FALSE END AS missing_death_date
+FROM GBS_VG_outcome v
+LEFT JOIN death_clean d ON v.person_id = d.person_id
+
+UNION
+
+-- Branch 2: Infection First Group (group_id = 2)
+-- time_zero = first_infection_date
+SELECT
+    2 AS group_id,
+    'infection first' AS group_name,
+    i.person_id,
+    first_infection_date AS time_zero,
+    DATE_ADD(first_infection_date, 30) AS time_end,
+    CASE
+        WHEN has_GBS = 1 THEN DATEDIFF(GBS_start_date, first_infection_date)
+        ELSE 30
+    END AS GBS_interval,
+    has_GBS,
+    GBS_start_date,
+    d.Death_date AS death_date,
+    CASE WHEN death_fact = 1 THEN TRUE ELSE FALSE END AS death,
+    CASE WHEN DATEDIFF(Death_date, first_infection_date) <= 30 THEN 1 ELSE 0 END AS death_in_30days,
+    CASE WHEN Death_date IS NULL AND death_fact = 1 THEN TRUE ELSE FALSE END AS missing_death_date
+FROM GBS_IG_outcome i
+LEFT JOIN death_clean d ON i.person_id = d.person_id
+
+UNION
+
+-- Branch 3: Visit First Group (group_id = 3)
+-- time_zero = first_visit
+SELECT
+    3 AS group_id,
+    'visit first' AS group_name,
+    j.person_id,
+    first_visit AS time_zero,
+    DATE_ADD(first_visit, 30) AS time_end,
+    CASE
+        WHEN has_GBS = 1 THEN DATEDIFF(GBS_start_date, first_visit)
+        ELSE 30
+    END AS GBS_interval,
+    has_GBS,
+    GBS_start_date,
+    d.Death_date AS death_date,
+    CASE WHEN death_fact = 1 THEN TRUE ELSE FALSE END AS death,
+    CASE WHEN DATEDIFF(Death_date, first_visit) <= 30 THEN 1 ELSE 0 END AS death_in_30days,
+    CASE WHEN Death_date IS NULL AND death_fact = 1 THEN TRUE ELSE FALSE END AS missing_death_date
+FROM GBS_NG_outcome j
+LEFT JOIN death_clean d ON j.person_id = d.person_id;
+
+
+-- ============================================================================
+-- STEP 3: cohort_censored
+-- Apply censoring rules to queue_group
+-- Remove patients with missing death dates unless outcome interval is determinable
+-- Add GBS_interval_2 which accounts for death as a competing event
+-- Add time period labels for pandemic phases
+-- ============================================================================
+-- Censoring logic:
+--   If death_in_30days = 1 AND has_GBS = 0
+--     → GBS_interval_2 = days from time_zero to death_date
+--   Otherwise → GBS_interval_2 = GBS_interval
+-- ============================================================================
+
+
+SELECT f.*
+FROM (
+    SELECT DISTINCT
+        q.*,
+        c.age,
+        CASE
+            WHEN q.death_in_30days = 1 AND q.has_GBS = 0
+                THEN DATEDIFF(q.death_date, q.time_zero)
+            ELSE q.GBS_interval
+        END AS GBS_interval_2,
+        CASE
+            WHEN (q.time_zero >= '2020-12-01' AND q.time_zero < '2021-05-01') THEN 'P1'
+            WHEN (q.time_zero >= '2021-05-01' AND q.time_zero < '2021-12-01') THEN 'P2'
+            WHEN (q.time_zero >= '2021-12-01') THEN 'P3'
+            ELSE NULL
+        END AS time_period,
+        CASE
+            WHEN (q.time_zero >= '2020-12-01' AND q.time_zero < '2021-04-01') THEN 'P1'
+            WHEN (q.time_zero >= '2021-04-01' AND q.time_zero < '2021-12-01') THEN 'P2'
+            WHEN (q.time_zero >= '2021-12-01') THEN 'P3'
+            ELSE NULL
+        END AS time_period_strains
+    FROM queue_group q
+    JOIN COHORT_without_null c ON q.person_id = c.person_id
+    WHERE NOT q.missing_death_date
+      AND (
+          (q.death_in_30days = 1 AND q.has_GBS = 0 AND DATEDIFF(q.death_date, q.time_zero) >= 0)
+          OR
+          (q.death_in_30days != 1 OR q.has_GBS = 1 OR q.GBS_interval >= 0)
+      )
+) f
+WHERE GBS_interval_2 >= 0 AND age >= 18;
+
+
+-- ============================================================================
+-- STEP 4: Final Check - Patient counts by group and GBS status
+-- ============================================================================
+
+
+SELECT
+    group_id AS groupid,
+    has_GBS AS hasgbs,
+    COUNT(DISTINCT person_id) AS unique_patient_count
+FROM queue_group
+GROUP BY group_id, has_GBS
+ORDER BY group_id, has_GBS;

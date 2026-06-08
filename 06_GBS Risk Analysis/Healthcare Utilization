@@ -1,0 +1,130 @@
+-- ============================================================================
+-- visit_occurrences.sql
+-- Description: Extract and process visit occurrences for healthcare utilization
+-- Captures outpatient, ER, office, inpatient, and other visit types
+-- ============================================================================
+-- Purpose: Create visit-based utilization metrics for cohort adjustment
+-- Visit types: Outpatient, Emergency Room, Office, Inpatient, Other
+-- ============================================================================
+
+-- ============================================================================
+-- STEP 1: Visit (Base Visit Table)
+-- Source: visit_occurrence
+-- Filter: any visit_concept_name containing 'visit'
+-- Purpose: Pull ALL visit types (outpatient, ER, office, inpatient, and others)
+-- ============================================================================
+
+
+SELECT *
+FROM visit_occurrence
+WHERE LOWER(visit_concept_name) LIKE '%visit%';
+
+
+-- ============================================================================
+-- STEP 2: Visit Count CTE Pattern
+-- This exact pattern is repeated for EVERY cohort table
+-- It counts each visit type per patient in the 365 days BEFORE their time_zero
+--
+-- time_zero varies by group:
+--   group 1 (vaccine)   → first_shot
+--   group 2 (infection) → first_infection_date
+--   group 3 (visit)     → first_visit
+--
+-- Inputs: any_cohort_table (must have person_id, time_zero), visit
+-- Output: visit counts appended to cohort table
+-- ============================================================================
+
+WITH VisitCTE AS (
+    SELECT
+        a.person_id,
+        
+        -- Individual visit type counts
+        COALESCE(COUNT(CASE WHEN c.visit_concept_name = 'Outpatient Visit' THEN 1 END), 0) AS Outpatient_Visit_Count,
+        COALESCE(COUNT(CASE WHEN c.visit_concept_name = 'Emergency Room Visit' THEN 1 END), 0) AS ER_Visit_Count,
+        COALESCE(COUNT(CASE WHEN c.visit_concept_name = 'Office Visit' THEN 1 END), 0) AS Office_Visit_Count,
+        COALESCE(COUNT(CASE WHEN c.visit_concept_name = 'Inpatient Visit' THEN 1 END), 0) AS Inpatient_Visit_Count,
+        COALESCE(COUNT(CASE WHEN c.visit_concept_name NOT IN (
+            'Outpatient Visit',
+            'Emergency Room Visit',
+            'Office Visit',
+            'Inpatient Visit'
+        ) THEN 1 END), 0) AS Other_Visit_Count,
+        
+        -- Total visit count = sum of all 5 categories
+        COALESCE(COUNT(CASE WHEN c.visit_concept_name = 'Outpatient Visit' THEN 1 END), 0) +
+        COALESCE(COUNT(CASE WHEN c.visit_concept_name = 'Emergency Room Visit' THEN 1 END), 0) +
+        COALESCE(COUNT(CASE WHEN c.visit_concept_name = 'Office Visit' THEN 1 END), 0) +
+        COALESCE(COUNT(CASE WHEN c.visit_concept_name = 'Inpatient Visit' THEN 1 END), 0) +
+        COALESCE(COUNT(CASE WHEN c.visit_concept_name NOT IN (
+            'Outpatient Visit',
+            'Emergency Room Visit',
+            'Office Visit',
+            'Inpatient Visit'
+        ) THEN 1 END), 0) AS Total_Visit_Count
+        
+    FROM cohort_table a
+    LEFT JOIN visit c
+        ON a.person_id = c.person_id
+    WHERE
+        -- Visit must be BEFORE the index date
+        c.visit_start_date < a.time_zero
+        -- Visit must be WITHIN 365 days before index date
+        AND DATEDIFF(a.time_zero, c.visit_start_date) < 365
+    GROUP BY a.person_id
+)
+
+SELECT
+    a.*,
+    COALESCE(v.Outpatient_Visit_Count, 0) AS Outpatient_Visit_Count,
+    COALESCE(v.ER_Visit_Count, 0) AS ER_Visit_Count,
+    COALESCE(v.Office_Visit_Count, 0) AS Office_Visit_Count,
+    COALESCE(v.Inpatient_Visit_Count, 0) AS Inpatient_Visit_Count,
+    COALESCE(v.Other_Visit_Count, 0) AS Other_Visit_Count,
+    COALESCE(v.Total_Visit_Count, 0) AS Total_Visit_Count
+FROM cohort_table a
+LEFT JOIN VisitCTE v
+    ON a.person_id = v.person_id;
+
+
+-- ============================================================================
+-- STEP 3: Visit Count Bucketing
+-- Applied in final demographic/demo_gbs tables
+-- Converts continuous counts into categorical bins for Table 1 reporting
+-- ============================================================================
+
+-- Use these CASE statements in your final demographic table:
+
+-- Total Visit buckets
+CASE
+    WHEN Total_Visit_Count BETWEEN 1 AND 10 THEN '1-10'
+    WHEN Total_Visit_Count BETWEEN 11 AND 30 THEN '11-30'
+    WHEN Total_Visit_Count BETWEEN 31 AND 60 THEN '31-60'
+    WHEN Total_Visit_Count >= 61 THEN '>=60'
+    ELSE 'No_Visits'
+END AS Total_Visits,
+
+-- Outpatient Visit buckets
+CASE
+    WHEN Outpatient_Visit_Count BETWEEN 1 AND 10 THEN '1-10'
+    WHEN Outpatient_Visit_Count BETWEEN 11 AND 30 THEN '11-30'
+    WHEN Outpatient_Visit_Count BETWEEN 31 AND 60 THEN '31-60'
+    WHEN Outpatient_Visit_Count >= 61 THEN '>=60'
+    ELSE 'No_Visits'
+END AS Outpatient_Visits,
+
+-- Inpatient Visit buckets
+CASE
+    WHEN Inpatient_Visit_Count BETWEEN 1 AND 5 THEN '1-5'
+    WHEN Inpatient_Visit_Count BETWEEN 6 AND 10 THEN '6-10'
+    WHEN Inpatient_Visit_Count >= 11 THEN '>=11'
+    ELSE 'No_Visits'
+END AS Inpatient_Visits,
+
+-- ER Visit buckets
+CASE
+    WHEN ER_Visit_Count BETWEEN 1 AND 3 THEN '1-3'
+    WHEN ER_Visit_Count BETWEEN 4 AND 6 THEN '4-6'
+    WHEN ER_Visit_Count >= 7 THEN '>=7'
+    ELSE 'No_Visits'
+END AS ER_Visits
+

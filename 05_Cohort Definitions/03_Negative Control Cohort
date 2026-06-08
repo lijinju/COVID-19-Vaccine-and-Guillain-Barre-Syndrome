@@ -1,5 +1,5 @@
 -- ============================================================================
--- Negative control cohort -- well_care_visits.sql
+-- Negative control cohort -- well_care_visits-- GBS_NG_outcome.sql
 -- Description: Wellness visit cohort with NO vaccine AND NO infection
 --              within 30 days of the exam visit
 -- ============================================================================
@@ -95,7 +95,7 @@ GROUP BY person_id;
 
 
 -- ============================================================================
--- STEP 4: GBS_NG_outcome (FINAL OUTPUT)
+-- STEP 4: GBS_NG_outcome  
 -- Left join incident GBS onto full control cohort
 -- Every person in unique_exam_wo_both gets one row
 -- has_GBS = 1 if incident GBS within window, else 0
