@@ -12,10 +12,9 @@
 -- ============================================================================
 
 -- ============================================================================
--- STEP 1: Death preprocessing subquery
+-- STEP 1: Death Data preprocessing subquery
 -- Deduplicate death records per patient
 -- Some patients have multiple death_date entries; take MAX to get the most recent
--- Keep NULL death_dates as NULL (not forced to 0)
 -- ============================================================================
 
 -- Pattern used in every branch:
