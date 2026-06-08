@@ -2,7 +2,7 @@
 ## 📖 Overview
 This repository contains the data pipeline processing and analytic code for a large-scale retrospective cohort study emulating to evaluate the incidence of **Guillain-Barré Syndrome (GBS)** following **COVID-19 vaccination** and/or **SARS-CoV-2 infection**. 
 
-The pipeline is built on the **OMOP Common Data Model (CDM)** and utilizes advanced epidemiological safeguards to handle immortal time bias, competing risks, and surveillance bias. It is designed to be executed on any OHDSI-compliant database (e.g., PostgreSQL, BigQuery, Snowflake, Databricks, Spark SQL).
+The pipeline is built on the **OMOP Common Data Model (CDM)** and utilizes advanced epidemiological safeguards to handle immortal time bias, competing risks, and surveillance bias.
 
 ## Study Design: Target Trial Emulation
 The study emulates a target trial with a primary **30-day risk window** (with sensitivity analyses at 60 and 90 days) starting from `Time_Zero`.
