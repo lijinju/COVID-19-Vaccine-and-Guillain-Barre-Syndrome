@@ -20,8 +20,7 @@ WITH RankedVaccinations AS (
         ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY drug_exposure_start_date ASC NULLS LAST) AS vaccination_rank
     FROM (
         SELECT DISTINCT person_id, drug_exposure_start_date
-        FROM Pre_covid_vaccine_all_record
-    )
+        FROM Pre_covid_vaccine
 )
 
 SELECT 
