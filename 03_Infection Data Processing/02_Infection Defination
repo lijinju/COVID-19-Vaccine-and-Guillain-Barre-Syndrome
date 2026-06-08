@@ -1,11 +1,12 @@
 /*
 ================================================================================
-File: Infection_First_Cohort_Definition.sql
+File: Infection_First_Definition.sql
 Description: Define cohort of people infected BEFORE vaccination (or never vaccinated)
+Or Infected and vaccinated MORE than 30 days after infection
 ================================================================================
 */
 
--- Infection first cohort: People infected BEFORE vaccination (or no vaccine)
+-- Infection first group: People infected BEFORE vaccination (or no vaccine)
 -- Reference date: 2020-12-11
 
 SELECT 

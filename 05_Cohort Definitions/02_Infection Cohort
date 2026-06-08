@@ -1,82 +1,123 @@
-================================================================================
-File: Define_Infection_First_Cohort.sql
-Description: Define cohort of people infected BEFORE vaccination (or never vaccinated)
-================================================================================
-*/
+-- ============================================================================
+-- GBS_IG_outcome.sql
+-- Description: GBS outcomes for patients in the Infection First group
+-- Identifies which infected patients developed GBS and when
+-- Excludes patients with GBS in the 365 days prior to infection
+-- ============================================================================
+-- Group: Infection first (group_id = 2)
+-- Index date: First infection date (first_infection_date)
+-- Risk window: 30 days post-infection
+-- ============================================================================
 
--- =============================================================================
--- Base Infection First Cohort Definition
--- =============================================================================
+-- ============================================================================
+-- STEP 1: Infection_first_group_2 (Filtered Cohort)
+-- Keep only patients confirmed as infection-first
+-- Deduplicate to one row per patient
+-- ============================================================================
 
--- Infection first cohort: People infected BEFORE vaccination (or never vaccinated)
--- Reference date: 2020-12-11
---
--- infection_first_group = 1 means either:
---   1. Infected and never got vaccinated
---   2. Infected and vaccinated MORE than 30 days after infection
---
--- vaccine_within_30 = 1 means vaccine given 1-30 days after infection
 
-SELECT 
-    i.person_id, 
-    v.first_shot AS vaccine_date, 
-    i.first_infection_date AS infection_date, 
-    DATEDIFF(v.first_shot, i.first_infection_date) AS days_between_infection_and_vaccine,
-    
-    -- PRIMARY FLAG: infection_first_group
-    CASE 
-        WHEN (DATEDIFF(v.first_shot, i.first_infection_date) > 30 OR v.person_id IS NULL) THEN 1 
-        ELSE 0 
-    END AS infection_first_group,
-    
-    -- SECONDARY FLAG: vaccine within 30 days after infection
-    CASE
-        WHEN (DATEDIFF(v.first_shot, i.first_infection_date) > 0 
-              AND DATEDIFF(v.first_shot, i.first_infection_date) < 30) THEN 1
-        ELSE 0
-    END AS vaccine_within_30,
-    
-FROM all_infection_fact i
-LEFT JOIN all_vaccine_fact v ON i.person_id = v.person_id
-WHERE (i.first_infection_date < v.first_shot OR v.person_id IS NULL) 
-  AND i.first_infection_date >= '2020-12-11'
-  AND i.first_infection_date IS NOT NULL;
-
--- =============================================================================
--- Extract Distinct Person IDs for Infection First Cohort
--- =============================================================================
-
--- Extract distinct person_ids with their first infection date
-SELECT DISTINCT 
-    person_id, 
-    infection_date AS first_infection_date
-FROM Infection_first_cohort_full
+SELECT DISTINCT
+    person_id,
+    first_infection_date
+FROM Infection_first_group
 WHERE infection_first_group = 1;
 
--- =============================================================================
--- Age Filter (>= 18 years at time of infection)
--- =============================================================================
+-- ============================================================================
+-- STEP 2: GBS_infection
+-- Find all GBS diagnoses within 30 days AFTER first infection
+-- Window: days_between in (0, 30) exclusive
+-- ============================================================================
 
--- Filter to patients aged >= 18 years at time of first infection
-SELECT 
-    i.person_id,
-    i.first_infection_date,
-    p.year_of_birth,
-    (YEAR(i.first_infection_date) - p.year_of_birth) AS age_at_infection
-FROM Infection_first_group_2 i
-LEFT JOIN person_1 p ON i.person_id = p.person_id
-WHERE p.year_of_birth IS NOT NULL
-  AND (YEAR(i.first_infection_date) - p.year_of_birth) >= 18
-ORDER BY i.person_id;
+SELECT
+    v.person_id,
+    v.first_infection_date,
+    i.condition_start_date,
+    DATEDIFF(i.condition_start_date, v.first_infection_date) AS days_between,
+    CASE
+        WHEN ((DATEDIFF(i.condition_start_date, v.first_infection_date) < 30
+               AND DATEDIFF(i.condition_start_date, v.first_infection_date) > 0)
+              OR i.person_id IS NULL) THEN 1
+        ELSE 0
+    END AS infection_first_group,
+    CASE
+        WHEN ((DATEDIFF(i.condition_start_date, v.first_infection_date) < 30
+               AND DATEDIFF(i.condition_start_date, v.first_infection_date) > 0)) THEN 0
+        ELSE 1
+    END AS GBS_within_30
+FROM GBS_ALL i
+LEFT JOIN Infection_first_group_2 v
+    ON v.person_id = i.person_id
+WHERE ((DATEDIFF(i.condition_start_date, v.first_infection_date) < 30
+        AND DATEDIFF(i.condition_start_date, v.first_infection_date) > 0)
+       OR i.person_id IS NULL)
+  AND (v.first_infection_date >= '2020-12-11');
 
--- =============================================================================
--- Add GBS Outcome Flags to Infection First Cohort
--- =============================================================================
+-- ============================================================================
+-- STEP 3: GBS_infection_365_before
+-- Prevalent GBS washout: GBS in the 365 days BEFORE first infection
+-- Window: days_between in (-365, 0) exclusive
+-- Persons here are excluded from STEP 5
+-- ============================================================================
 
--- Add has_GBS flag and GBS start date to infection-first cohort
-SELECT DISTINCT 
+SELECT
+    v.person_id,
+    v.first_infection_date,
+    i.condition_start_date,
+    DATEDIFF(i.condition_start_date, v.first_infection_date) AS days_between,
+    CASE
+        WHEN ((DATEDIFF(i.condition_start_date, v.first_infection_date) < 30
+               AND DATEDIFF(i.condition_start_date, v.first_infection_date) > 0)
+              OR i.person_id IS NULL) THEN 1
+        ELSE 0
+    END AS infection_first_group,
+    CASE
+        WHEN ((DATEDIFF(i.condition_start_date, v.first_infection_date) < 30
+               AND DATEDIFF(i.condition_start_date, v.first_infection_date) > 0)) THEN 0
+        ELSE 1
+    END AS GBS_within_30
+FROM GBS_ALL i
+LEFT JOIN Infection_first_group_2 v
+    ON v.person_id = i.person_id
+WHERE ((DATEDIFF(i.condition_start_date, v.first_infection_date) > -365
+        AND DATEDIFF(i.condition_start_date, v.first_infection_date) < 0)
+       OR i.person_id IS NULL)
+  AND (v.first_infection_date >= '2020-12-11');
+
+-- ============================================================================
+-- STEP 4: GBS_infection_group
+-- Earliest incident GBS date per person
+-- Excludes anyone with prevalent GBS (NOT IN STEP 4)
+-- ============================================================================
+
+SELECT
+    person_id,
+    MIN(condition_start_date) AS first_condition_start_date
+FROM GBS_infection
+WHERE infection_first_group = '1'
+    AND person_id NOT IN (
+        SELECT person_id FROM GBS_infection_365_before
+    )
+GROUP BY person_id;
+
+-- ============================================================================
+-- STEP 5: GBS_IG_outcome [FINAL OUTPUT]
+-- Left join incident GBS onto full infection cohort
+-- Every person in Infection_first_group_2 gets one row
+-- has_GBS = 1 if incident GBS within window, else 0
+-- GBS_start_date = first qualifying GBS date, else NULL
+-- ============================================================================
+
+SELECT DISTINCT
     i.*,
-    CASE WHEN g.person_id IS NOT NULL THEN 1 ELSE 0 END AS has_GBS,
-    g.first_condition_start_date AS GBS_start_date
+    CASE
+        WHEN g.person_id IS NOT NULL THEN 1
+        ELSE 0
+    END AS has_GBS,
+    CASE
+        WHEN g.first_condition_start_date IS NOT NULL
+            THEN g.first_condition_start_date
+        ELSE NULL
+    END AS GBS_start_date
 FROM Infection_first_group_2 i
-LEFT JOIN GBS_infection_group g ON g.person_id = i.person_id;
+LEFT JOIN GBS_infection_group g
+    ON g.person_id = i.person_id;

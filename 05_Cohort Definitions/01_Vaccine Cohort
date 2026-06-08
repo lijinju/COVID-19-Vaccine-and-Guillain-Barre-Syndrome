@@ -1,5 +1,5 @@
 -- ============================================================================
--- gbs_vg_outcome.sql
+-- GBS_VG_outcome.sql
 -- Description: GBS outcomes for patients in the Vaccine First group
 -- Identifies which vaccinated patients developed GBS and when
 -- Excludes patients with GBS in the 365 days prior to vaccination
@@ -15,11 +15,6 @@
 -- Window: days_between in (0, 30) exclusive
 -- ============================================================================
 
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.6e6d0d08-6e28-42ad-a49a-5973c1f8e09e"),
-    GBS_ALL=Input(rid="ri.foundry.main.dataset.d8e6fa28-ed1a-4672-87c4-5eb4f2edb1c7"),
-    Vaccine_first_group_2=Input(rid="ri.foundry.main.dataset.32164ea6-9610-43d0-9acd-edd4692e2e66")
-)
 
 SELECT
     v.person_id,
@@ -29,7 +24,7 @@ SELECT
     CASE
         WHEN (DATEDIFF(i.condition_start_date, v.first_shot) < 30
           AND DATEDIFF(i.condition_start_date, v.first_shot) > 0)
-          OR i.person_id IS NULL THEN 1
+          THEN 1
         ELSE 0
     END AS vaccine_first_group,
     CASE
@@ -38,14 +33,13 @@ SELECT
         ELSE 0
     END AS GBS_within_30
 FROM GBS_ALL i
-LEFT JOIN Vaccine_first_group_2 v
+LEFT JOIN Vaccine_first_group v
     ON v.person_id = i.person_id
 WHERE
     (   DATEDIFF(i.condition_start_date, v.first_shot) < 30
     AND DATEDIFF(i.condition_start_date, v.first_shot) > 0
-    OR  i.person_id IS NULL
     )
-    AND v.first_shot >= '2020-12-11';
+    AND v.first_shot >= '2020-12-11' AND v.vaccine_first_group = 1;
 
 
 -- ============================================================================
@@ -64,7 +58,7 @@ SELECT
     CASE
         WHEN (DATEDIFF(i.condition_start_date, v.first_shot) < 30
           AND DATEDIFF(i.condition_start_date, v.first_shot) > 0)
-          OR i.person_id IS NULL THEN 1
+          THEN 1
         ELSE 0
     END AS vaccine_first_group,
     CASE
@@ -73,14 +67,13 @@ SELECT
         ELSE 0
     END AS GBS_within_30
 FROM GBS_ALL i
-LEFT JOIN Vaccine_first_group_2 v
+LEFT JOIN Vaccine_first_group v
     ON v.person_id = i.person_id
 WHERE
     (   DATEDIFF(i.condition_start_date, v.first_shot) > -365
     AND DATEDIFF(i.condition_start_date, v.first_shot) < 0
-    OR  i.person_id IS NULL
     )
-    AND v.first_shot >= '2020-12-11';
+    AND v.first_shot >= '2020-12-11'AND v.vaccine_first_group = 1;
 
 
 -- ============================================================================
@@ -122,7 +115,7 @@ SELECT DISTINCT
             THEN g.first_condition_start_date
         ELSE NULL
     END AS GBS_start_date
-FROM Vaccine_first_group_2 i
+FROM Vaccine_first_group i
 LEFT JOIN GBS_Vaccine_group g
     ON g.person_id = i.person_id
 WHERE i.vaccine_first_group = 1;
