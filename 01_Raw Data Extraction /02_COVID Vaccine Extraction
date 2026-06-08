@@ -6,12 +6,6 @@ Description: Extract COVID-19 vaccination records from drug_exposure
 ================================================================================
 */
 
-WITH covid_vaccine_concepts AS (
-    SELECT *
-    FROM concept
-    WHERE LOWER(concept_name) LIKE '%covid-19%vaccine%' 
-      AND domain_id = 'Drug'
-)
 
 SELECT DISTINCT 
     d.person_id,
@@ -20,6 +14,23 @@ SELECT DISTINCT
     c.concept_name AS drug_concept_name,
     d.drug_exposure_id
 FROM drug_exposure d
-INNER JOIN covid_vaccine_concepts c 
-    ON d.drug_concept_id = c.concept_id
+    WHERE concept_id IN (
+        42649039, 37003432, 37003434, 37003435, 1759205, 779678,
+        1525539, 722118, 722117, 722119, 722120, 778267,
+        702678, 724906, 702676, 724907, 702677, 905420,
+        778266, 778265, 37003516, 742036, 42647483, 1525540,
+        36868353, 779413, 42631341, 37003517, 779676, 42796198,
+        779679, 1525541, 742037, 1525542, 37003431, 742039,
+        36873496, 779947, 1799557, 742008, 36873497, 702117,
+        36873120, 1525545, 1799562, 37003433, 1759203, 42797616,
+        36900252, 1525509, 742040, 1525544, 780154, 780155,
+        702679, 739901, 739903, 1226309, 766241, 766240,
+        759696, 777323, 733013, 777320, 733014, 777322,
+        777321, 759738, 766239, 777319, 759694, 766238,
+        759736, 759737, 759695, 759735, 702866
+    )
+    AND LOWER(concept_name) LIKE '%covid-19%vaccine%'
+  
+)
+
 WHERE d.drug_exposure_start_date >= '2020-12-11';
