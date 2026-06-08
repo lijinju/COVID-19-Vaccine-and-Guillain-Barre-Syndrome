@@ -55,11 +55,6 @@ WHERE
 -- Persons here are excluded from STEP 3
 -- ============================================================================
 
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.27ab6b08-fae7-4ddd-816d-b278ab3f7879"),
-    GBS_ALL=Input(rid="ri.foundry.main.dataset.d8e6fa28-ed1a-4672-87c4-5eb4f2edb1c7"),
-    Vaccine_first_group_2=Input(rid="ri.foundry.main.dataset.32164ea6-9610-43d0-9acd-edd4692e2e66")
-)
 
 SELECT
     v.person_id,
@@ -94,11 +89,6 @@ WHERE
 -- Excludes anyone with prevalent GBS (NOT IN STEP 2)
 -- ============================================================================
 
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.35d80445-e243-4f7d-9aa1-45b2957b23bb"),
-    GBS_VACCINCE_ALL=Input(rid="ri.foundry.main.dataset.6e6d0d08-6e28-42ad-a49a-5973c1f8e09e"),
-    GBS_vaccine_before365=Input(rid="ri.foundry.main.dataset.27ab6b08-fae7-4ddd-816d-b278ab3f7879")
-)
 
 SELECT
     person_id,
@@ -120,11 +110,6 @@ GROUP BY person_id;
 -- GBS_start_date = first qualifying GBS date, else NULL
 -- ============================================================================
 
-@transform_pandas(
-    Output(rid="ri.foundry.main.dataset.054a420c-e54f-4dbd-a27c-6bfe00ac0e89"),
-    GBS_Vaccine_group=Input(rid="ri.foundry.main.dataset.35d80445-e243-4f7d-9aa1-45b2957b23bb"),
-    Vaccine_first_group_2=Input(rid="ri.foundry.main.dataset.32164ea6-9610-43d0-9acd-edd4692e2e66")
-)
 
 SELECT DISTINCT
     i.*,
