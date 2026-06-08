@@ -14,10 +14,8 @@ To prevent **immortal time bias**, patients are assigned to mutually exclusive g
 3. **Visit First (Negative Control):** Index date = Routine medical visit / Well-check (Controls for healthcare-seeking behavior and surveillance bias).
 4. **Sequential:** Vaccinated, then subsequently infected.
 
-### Epidemiological Safeguards
+### Epidemiological Surveillance Measures
 * **Prevalent Case Exclusion:** 365-day lookback to exclude patients with prior GBS diagnoses.
 * **Competing Risks:** Survival time is censored at the date of death if the patient dies before developing GBS.
 * **Surveillance Bias Adjustment:** Baseline healthcare utilization (Outpatient, ER, Inpatient visit counts) is calculated and adjusted for.
-* **Active Comparators:** Influenza vaccination cohorts are included to differentiate true biological signals from background seasonal noise.
 
-A Reproducible Target Trial Emulation Pipeline for Evaluating Guillain-Barré Syndrome (GBS) Risk Post-COVID-19 Vaccination and Infection. Originally designed for large-scale execution on Palantir Foundry using Spark SQL, the logic provided here is mapped to the OMOP Common Data Model (CDM). It can be adapted for any OHDSI-compliant database (e.g., PostgreSQL, BigQuery, Snowflake, or Databricks).
