@@ -1,6 +1,6 @@
 
 ## 📖 Overview
-This repository contains the data pipeline processing and analytic code for a large-scale retrospective cohort study emulating to evaluate the incidence of **Guillain-Barré Syndrome (GBS)** following **COVID-19 vaccination** and/or **SARS-CoV-2 infection**. 
+This repository contains the data processing pipeline and analytic code for a large-scale retrospective cohort study emulating to evaluate the incidence of **Guillain-Barré Syndrome (GBS)** following **COVID-19 vaccination** and/or **SARS-CoV-2 infection**. 
 
 The pipeline is built on the **OMOP Common Data Model (CDM)** and utilizes advanced epidemiological safeguards to handle immortal time bias, competing risks, and surveillance bias.
 
