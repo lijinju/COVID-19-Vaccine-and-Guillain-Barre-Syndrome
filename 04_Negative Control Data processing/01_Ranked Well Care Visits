@@ -31,4 +31,5 @@ SELECT
     ) AS total_visit_count
 FROM RankedVisits
 GROUP BY person_id
-ORDER BY person_id;
+ORDER BY person_id
+WHERE ;

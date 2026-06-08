@@ -1,80 +1,68 @@
 -- ============================================================================
 -- unique_exam_wo_both.sql
--- Description: Wellness visit cohort with NO prior vaccination AND NO prior infection
--- Index date = first wellness visit that occurs BEFORE any vaccine AND BEFORE any infection
--- This serves as a clean control group
+-- Description: Wellness visit cohort with NO vaccine AND NO infection
+--              within 30 days of the exam visit
 -- ============================================================================
--- Inclusion Criteria:
---   - First wellness visit date < first vaccine dose date (or no vaccine ever)
---   - First wellness visit date < first infection date (or no infection ever)
---   - No vaccine dose within 30 days AFTER the visit
---   - No infection within 30 days AFTER the visit
---   - Visit date >= 2020-12-11
+-- Purpose: Create control cohort of patients with routine wellness exams
+--          who had never had vaccine or infection OR no vaccine or infection
+--          within 30 days before or after
+-- Index date: First wellness visit (first_visit)
+-- Risk window: 30 days post-visit
 -- ============================================================================
 
+-- ============================================================================
+-- STEP 1: Unique_Exam_Wo_V
+-- From post-2020 exam cohort, keep patients whose first vaccine shot
+-- was MORE than 30 days after their first exam visit, or never vaccinated
+-- Excludes: Vaccine within 30 days after visit
+-- ============================================================================
 
-
-SELECT DISTINCT
-    e.person_id,
-    e.first_visit AS time_zero,
-    DATE_ADD(e.first_visit, 30) AS time_end,
+SELECT
+    i.person_id,
+    i.first_visit,
     v.first_shot,
-    i.first_infection_date,
-    
-    -- Days between visit and vaccination (negative = visit before vaccine)
-    DATEDIFF(e.first_visit, v.first_shot) AS days_to_vaccine,
-    
-    -- Days between visit and infection (negative = visit before infection)
-    DATEDIFF(e.first_visit, i.first_infection_date) AS days_to_infection,
-    
-    -- Flag: Visit occurs BEFORE any vaccination
-    CASE 
-        WHEN v.first_shot IS NULL THEN 1
-        WHEN e.first_visit < v.first_shot THEN 1
+    DATEDIFF(i.first_visit, v.first_shot) AS days_between,
+    CASE
+        WHEN DATEDIFF(v.first_shot, i.first_visit) > 30 THEN 1
         ELSE 0
-    END AS visit_before_vaccine,
-    
-    -- Flag: Visit occurs BEFORE any infection
-    CASE 
-        WHEN i.first_infection_date IS NULL THEN 1
-        WHEN e.first_visit < i.first_infection_date THEN 1
+    END AS visit_first_group,
+    CASE
+        WHEN (DATEDIFF(i.first_visit, v.first_shot) > 0
+              AND DATEDIFF(i.first_visit, v.first_shot) < 30) THEN 1
         ELSE 0
-    END AS visit_before_infection,
-    
-    -- Flag: No vaccine within 30 days AFTER visit
-    CASE 
-        WHEN v.first_shot IS NULL THEN 1
-        WHEN DATEDIFF(v.first_shot, e.first_visit) > 30 THEN 1
-        ELSE 0
-    END AS no_vaccine_within_30days_followup,
-    
-    -- Flag: No infection within 30 days AFTER visit
-    CASE 
-        WHEN i.first_infection_date IS NULL THEN 1
-        WHEN DATEDIFF(i.first_infection_date, e.first_visit) > 30 THEN 1
-        ELSE 0
-    END AS no_infection_within_30days_followup,
-    
-    -- Combined flag: Clean control group
-    -- (no prior vaccine, no prior infection, no vaccine/infection during 30-day follow-up)
-    CASE 
-        WHEN (v.first_shot IS NULL OR e.first_visit < v.first_shot)
-         AND (i.first_infection_date IS NULL OR e.first_visit < i.first_infection_date)
-         AND (v.first_shot IS NULL OR DATEDIFF(v.first_shot, e.first_visit) > 30)
-         AND (i.first_infection_date IS NULL OR DATEDIFF(i.first_infection_date, e.first_visit) > 30)
-        THEN 1
-        ELSE 0
-    END AS clean_control_group
+    END AS vaccine_within_30
+FROM unique_exam_after2020 i
+LEFT JOIN all_vaccine_fact v
+    ON i.person_id = v.person_id
+WHERE (DATEDIFF(v.first_shot, i.first_visit) > 30 OR v.first_shot IS NULL);
 
-FROM unique_exam_after2020 e
-LEFT JOIN all_vaccine_fact v 
-    ON e.person_id = v.person_id
-LEFT JOIN all_infection_fact i 
-    ON e.person_id = i.person_id
-WHERE e.first_visit >= '2020-12-11'
-  AND (v.first_shot IS NULL OR e.first_visit < v.first_shot)
-  AND (i.first_infection_date IS NULL OR e.first_visit < i.first_infection_date)
-  AND (v.first_shot IS NULL OR DATEDIFF(v.first_shot, e.first_visit) > 30)
-  AND (i.first_infection_date IS NULL OR DATEDIFF(i.first_infection_date, e.first_visit) > 30)
-ORDER BY e.person_id;
 
+-- ============================================================================
+-- STEP 2: Unique_Exam_Wo_Both 
+-- From vaccine-excluded exam cohort, exclude patients whose first infection
+-- occurred within 30 days of their exam visit
+-- Final cohort has neither vaccine nor infection within 30 days of exam
+-- ============================================================================
+
+SELECT
+    i.person_id,
+    i.first_visit,
+    i.days_between,
+    i.first_shot,
+    v.first_infection_date,
+    DATEDIFF(v.first_infection_date, i.first_visit) AS days_between2,
+    CASE
+        WHEN (DATEDIFF(v.first_infection_date, i.first_visit) > 30 OR v.person_id IS NULL) THEN 1
+        ELSE 0
+    END AS visit_first_group,
+    CASE
+        WHEN (DATEDIFF(i.first_visit, v.first_infection_date) > 0
+              AND DATEDIFF(i.first_visit, v.first_infection_date) < 30) THEN 1
+        ELSE 0
+    END AS visit_within_30
+FROM unique_exam_wo_v i
+LEFT JOIN all_infection_fact v
+    ON i.person_id = v.person_id
+WHERE (DATEDIFF(v.first_infection_date, i.first_visit) > 30 OR v.person_id IS NULL)
+  AND (i.first_visit >= '2020-12-11')
+ORDER BY i.person_id;

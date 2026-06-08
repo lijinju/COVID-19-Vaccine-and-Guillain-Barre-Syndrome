@@ -1,150 +1,122 @@
--- =============================================================================
---  Negative Control Cohort - Wellness Visits with NO COVID and NO Vaccine
--- =============================================================================
+-- ============================================================================
+-- well_care_visits.sql
+-- Description: Wellness visit cohort with NO vaccine AND NO infection
+--              within 30 days of the exam visit
+-- ============================================================================
+-- Purpose: Create control cohort of patients with routine wellness exams
+--          who had no vaccine or infection within 30 days after visit
+-- Index date: First wellness visit (first_visit)
+-- Risk window: 30 days post-visit
+-- ============================================================================
+-- Input: unique_exam_wo_both (clean control cohort from previous step)
+-- ============================================================================
 
--- Wellness visits for patients with NO COVID infection and NO COVID vaccination
--- This serves as a NEGATIVE CONTROL cohort (should have no association with GBS)
 
-SELECT 
-    w.*, 
-    p.year_of_birth,
-    (YEAR(w.first_visit) - p.year_of_birth) AS age_at_visit
-FROM first_wellness_visits w
-LEFT JOIN person_1 p ON w.person_id = p.person_id
-WHERE 
-    p.year_of_birth IS NOT NULL
-    AND (YEAR(w.first_visit) - p.year_of_birth) >= 18
-    AND w.person_id NOT IN (
-        SELECT person_id FROM pre_covid_infection
-        UNION
-        SELECT person_id FROM Pre_covid_vaccine_all_record
-    )
-    AND w.first_visit >= '2020-12-11';
+-- ============================================================================
+-- STEP 1: GBS_NG_all
+-- Find all GBS diagnoses within 30 days AFTER first wellness visit
+-- Window: days_between in (0, 30) exclusive
+-- ============================================================================
 
 
 
--- =============================================================================
--- Age Filter for Negative Control Cohort
--- =============================================================================
-
--- Verify age >= 18 for negative control cohort
-SELECT 
-    w.*, 
-    p.year_of_birth,
-    (YEAR(w.first_visit) - p.year_of_birth) AS age_at_visit
-FROM wellness_negative_control w
-LEFT JOIN person_1 p ON w.person_id = p.person_id
-WHERE (YEAR(w.first_visit) - p.year_of_birth) >= 18;
-
--- =============================================================================
--- GBS Risk After Wellness Visit (Negative Control Analysis)
--- =============================================================================
-
--- GBS risk within 30 days after wellness visit (NEGATIVE CONTROL)
--- If this shows a significant association, it suggests detection bias
-
-SELECT                                                              
-    v.person_id,  
-    v.first_visit AS visit_date, 
-    i.condition_start_date AS gbs_date, 
+SELECT
+    v.person_id,
+    v.first_visit,
+    i.condition_start_date,
     DATEDIFF(i.condition_start_date, v.first_visit) AS days_between,
-    
-    -- GBS within 30 days after visit (risk window)
-    CASE 
-        WHEN (DATEDIFF(i.condition_start_date, v.first_visit) < 30  
-              AND DATEDIFF(i.condition_start_date, v.first_visit) > 0) 
-             OR i.person_id IS NULL THEN 1
-        ELSE 0
-    END AS GBS_within_30,
-    
-    -- Visit before GBS (for risk period calculation)
     CASE
-        WHEN (DATEDIFF(v.first_visit, i.condition_start_date) < 30  
-              AND DATEDIFF(v.first_visit, i.condition_start_date) > 0) THEN 1
+        WHEN ((DATEDIFF(i.condition_start_date, v.first_visit) < 30
+               AND DATEDIFF(i.condition_start_date, v.first_visit) > 0)
+              OR i.person_id IS NULL) THEN 1
         ELSE 0
-    END AS visit_before_GBS,
-    
-    -- HAS_GBS FLAG: Did the patient ever develop GBS after the visit?
-    CASE 
-        WHEN i.person_id IS NOT NULL AND i.condition_start_date > v.first_visit THEN 1
+    END AS visit_first_group,
+    CASE
+        WHEN (DATEDIFF(i.condition_start_date, v.first_visit) > 0
+              AND DATEDIFF(i.condition_start_date, v.first_visit) < 30) THEN 1
         ELSE 0
-    END AS has_GBS,
-    
-    -- GBS start date (if GBS occurred after visit)
-    CASE 
-        WHEN i.person_id IS NOT NULL AND i.condition_start_date > v.first_visit 
-        THEN i.condition_start_date
-        ELSE NULL
-    END AS GBS_start_date,
-
+    END AS GBS_within_30
 FROM GBS_ALL i
-RIGHT JOIN unique_exam_wo_both v ON v.person_id = i.person_id 
-WHERE (i.condition_start_date > v.first_visit OR i.person_id IS NULL) 
-  AND v.first_visit >= '2020-12-11';
+LEFT JOIN unique_exam_wo_both v
+    ON v.person_id = i.person_id
+WHERE ((DATEDIFF(i.condition_start_date, v.first_visit) < 30
+        AND DATEDIFF(i.condition_start_date, v.first_visit) > 0)
+       OR i.person_id IS NULL)
+  AND (v.first_visit >= '2020-12-11');
 
--- =============================================================================
--- Extract GBS Cases Within 30 Days After Wellness Visit
--- =============================================================================
 
--- Extract only the GBS cases that occurred within 30 days after wellness visit
-SELECT *
-FROM wellness_gbs_risk
-WHERE GBS_within_30 = 1;
+-- ============================================================================
+-- STEP 2: GBS_NG_before365
+-- Prevalent GBS washout: GBS in the 365 days BEFORE wellness visit
+-- Window: days_between in (-365, 0) exclusive
+-- Persons here are excluded from STEP 5
+-- ============================================================================
 
--- =============================================================================
--- Control Period - GBS in 30 Days BEFORE Wellness Visit
--- =============================================================================
 
--- GBS in the 30 days BEFORE wellness visit (control period for SCCS)
-
-SELECT                                                              
-    v.person_id,  
-    v.first_visit AS visit_date,  
-    i.condition_start_date AS gbs_date,  
-    DATEDIFF(i.condition_start_date, v.first_visit) AS days_before_visit,
-    
-    -- GBS in prior 30 days flag
-    CASE 
-        WHEN (DATEDIFF(i.condition_start_date, v.first_visit) > -30  
-              AND DATEDIFF(i.condition_start_date, v.first_visit) < 0) THEN 1
+SELECT
+    v.person_id,
+    v.first_visit,
+    i.condition_start_date,
+    DATEDIFF(i.condition_start_date, v.first_visit) AS days_between,
+    CASE
+        WHEN ((DATEDIFF(i.condition_start_date, v.first_visit) < 30
+               AND DATEDIFF(i.condition_start_date, v.first_visit) > 0)
+              OR i.person_id IS NULL) THEN 1
         ELSE 0
-    END AS GBS_in_prior_30_days,
-    
-    -- HAS_GBS flag for control period
-    CASE 
-        WHEN i.person_id IS NOT NULL THEN 1
+    END AS visit_first_group,
+    CASE
+        WHEN (DATEDIFF(i.condition_start_date, v.first_visit) > 0
+              AND DATEDIFF(i.condition_start_date, v.first_visit) < 30) THEN 1
         ELSE 0
-    END AS has_GBS_control_period
-
+    END AS GBS_within_30
 FROM GBS_ALL i
-LEFT JOIN unique_exam_wo_both v ON v.person_id = i.person_id 
-WHERE (DATEDIFF(i.condition_start_date, v.first_visit) > -30  
-       AND DATEDIFF(i.condition_start_date, v.first_visit) < 0)
-  AND v.first_visit >= '2020-12-11';
+LEFT JOIN unique_exam_wo_both v
+    ON v.person_id = i.person_id
+WHERE ((DATEDIFF(i.condition_start_date, v.first_visit) > -365
+        AND DATEDIFF(i.condition_start_date, v.first_visit) < 0)
+       OR i.person_id IS NULL)
+  AND (v.first_visit >= '2020-12-11');
 
--- =============================================================================
--- First GBS After Wellness Visit (Excluding Prior GBS)
--- =============================================================================
 
--- First GBS occurrence after wellness visit (no GBS in the 30 days prior)
-SELECT 
-    person_id, 
-    MIN(gbs_date) AS first_gbs_after_wellness_visit,
-    MIN(days_between) AS days_from_visit_to_first_gbs
-FROM wellness_gbs_30 v
-WHERE v.person_id NOT IN (SELECT person_id FROM wellness_gbs_before30)
-  AND v.GBS_within_30 = 1
+-- ============================================================================
+-- STEP 3: GBS_NG_group
+-- Earliest incident GBS date per person
+-- Excludes anyone with prevalent GBS (NOT IN STEP 4)
+-- ============================================================================
+
+
+SELECT
+    person_id,
+    MIN(condition_start_date) AS first_condition_start_date
+FROM GBS_NG_all
+WHERE GBS_within_30 = 1
+    AND person_id NOT IN (
+        SELECT person_id FROM GBS_NG_before365
+    )
 GROUP BY person_id;
 
--- =============================================================================
--- Final Negative Control Cohort with GBS Flags
--- =============================================================================
 
--- Add GBS outcome flags to the negative control cohort
-SELECT 
-    w.*,
-    CASE WHEN g.person_id IS NOT NULL THEN 1 ELSE 0 END AS has_GBS,
-    g.first_gbs_after_wellness_visit AS GBS_start_date,
-    g.days_from_visit_to_first_gbs AS days_to_GBS
-FROM wellness_negative_control w
-LEFT JOIN first_gbs_after_wellness g ON w.person_id = g.person_id;
+-- ============================================================================
+-- STEP 4: GBS_NG_outcome (FINAL OUTPUT)
+-- Left join incident GBS onto full control cohort
+-- Every person in unique_exam_wo_both gets one row
+-- has_GBS = 1 if incident GBS within window, else 0
+-- GBS_start_date = first qualifying GBS date, else NULL
+-- ============================================================================
+
+
+SELECT DISTINCT
+    i.*,
+    CASE
+        WHEN g.person_id IS NOT NULL THEN 1
+        ELSE 0
+    END AS has_GBS,
+    CASE
+        WHEN g.first_condition_start_date IS NOT NULL
+            THEN g.first_condition_start_date
+        ELSE NULL
+    END AS GBS_start_date
+FROM unique_exam_wo_both i
+LEFT JOIN GBS_NG_group g
+    ON g.person_id = i.person_id;
+    

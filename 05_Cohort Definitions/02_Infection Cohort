@@ -36,7 +36,7 @@ SELECT
     CASE
         WHEN ((DATEDIFF(i.condition_start_date, v.first_infection_date) < 30
                AND DATEDIFF(i.condition_start_date, v.first_infection_date) > 0)
-              OR i.person_id IS NULL) THEN 1
+              ) THEN 1
         ELSE 0
     END AS infection_first_group,
     CASE
@@ -49,8 +49,7 @@ LEFT JOIN Infection_first_group_2 v
     ON v.person_id = i.person_id
 WHERE ((DATEDIFF(i.condition_start_date, v.first_infection_date) < 30
         AND DATEDIFF(i.condition_start_date, v.first_infection_date) > 0)
-       OR i.person_id IS NULL)
-  AND (v.first_infection_date >= '2020-12-11');
+      AND (v.first_infection_date >= '2020-12-11');
 
 -- ============================================================================
 -- STEP 3: GBS_infection_365_before
@@ -67,7 +66,7 @@ SELECT
     CASE
         WHEN ((DATEDIFF(i.condition_start_date, v.first_infection_date) < 30
                AND DATEDIFF(i.condition_start_date, v.first_infection_date) > 0)
-              OR i.person_id IS NULL) THEN 1
+              ) THEN 1
         ELSE 0
     END AS infection_first_group,
     CASE
@@ -80,7 +79,7 @@ LEFT JOIN Infection_first_group_2 v
     ON v.person_id = i.person_id
 WHERE ((DATEDIFF(i.condition_start_date, v.first_infection_date) > -365
         AND DATEDIFF(i.condition_start_date, v.first_infection_date) < 0)
-       OR i.person_id IS NULL)
+       )
   AND (v.first_infection_date >= '2020-12-11');
 
 -- ============================================================================
@@ -100,7 +99,7 @@ WHERE infection_first_group = '1'
 GROUP BY person_id;
 
 -- ============================================================================
--- STEP 5: GBS_IG_outcome [FINAL OUTPUT]
+-- STEP 5: GBS_IG_outcome  
 -- Left join incident GBS onto full infection cohort
 -- Every person in Infection_first_group_2 gets one row
 -- has_GBS = 1 if incident GBS within window, else 0
