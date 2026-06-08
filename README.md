@@ -19,14 +19,4 @@ To prevent **immortal time bias**, patients are assigned to mutually exclusive g
 * **Competing Risks:** Survival time is censored at the date of death if the patient dies before developing GBS.
 * **Surveillance Bias Adjustment:** Baseline healthcare utilization (Outpatient, ER, Inpatient visit counts) is calculated and adjusted for.
 
-## Statistical Analysis Features
 
-- **Primary Analysis**: Incidence rates and risk differences in 30-day window
-- **Censoring**: Right-censoring at death or end of risk window
-- **Sensitivity Analyses**:
-  - 60-day and 90-day risk windows
-  - Second-dose cohort
-  - COVID-19 vaccine only for excluding the other co-administarion of vaccines
-  - Variant-period stratification
-- **Baseline Balance**: Standardized mean differences via Table 1
-- **Time-to-Event**: Kaplan-Meier, Cox regression
