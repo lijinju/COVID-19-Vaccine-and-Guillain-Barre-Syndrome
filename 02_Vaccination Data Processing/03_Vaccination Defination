@@ -1,15 +1,9 @@
 -- ============================================================================
--- vaccine_first_group.sql
--- Description: Patients who received COVID-19 vaccination BEFORE infection
--- Index date = first vaccine shot
--- Risk window = 30 days post-vaccination
+-- 01_vaccine_first_group.sql
+-- Description: Patients vaccinated BEFORE infection (or no infection)
+-- Excludes: Infection before vaccine OR within 30 days post-vaccine
+-- Depends on: all_vaccine_fact, all_infection_fact 
 -- ============================================================================
--- Inclusion Criteria:
---   - First vaccine shot >= 2020-12-11
---   - Excludes patients with infection BEFORE vaccination
---   - Excludes patients with infection within 30 days post-vaccination (risk period)
--- ============================================================================
-
 
 
 SELECT
@@ -17,36 +11,23 @@ SELECT
     v.first_shot AS time_zero,
     DATE_ADD(v.first_shot, 30) AS time_end,
     i.first_infection_date,
-    
-    -- Days from vaccination to infection (negative = infection before vaccine)
     DATEDIFF(i.first_infection_date, v.first_shot) AS days_to_infection,
-    
-    -- Flag: Vaccination occurs before infection AND infection >30 days after vaccine (or no infection)
     CASE 
-        WHEN i.person_id IS NULL THEN 1                                    -- No infection ever
-        WHEN DATEDIFF(i.first_infection_date, v.first_shot) > 30 THEN 1     -- Infection after risk period
+        WHEN i.person_id IS NULL THEN 1
+        WHEN DATEDIFF(i.first_infection_date, v.first_shot) > 30 THEN 1
         ELSE 0
     END AS vaccine_first_group,
-    
-    -- Flag: Infection occurs within 30 days post-vaccination (EXCLUDED from cohort)
     CASE
         WHEN DATEDIFF(i.first_infection_date, v.first_shot) > 0 
          AND DATEDIFF(i.first_infection_date, v.first_shot) <= 30 THEN 1
         ELSE 0
     END AS infection_within_risk_period,
-    
-    -- Flag: Infection occurs BEFORE vaccination (EXCLUDED from cohort)
     CASE
         WHEN DATEDIFF(i.first_infection_date, v.first_shot) <= 0 THEN 1
         ELSE 0
     END AS infection_before_vaccine
-
 FROM all_vaccine_fact v
-LEFT JOIN all_infection_fact i
-    ON v.person_id = i.person_id
+LEFT JOIN all_infection_fact i ON v.person_id = i.person_id
 WHERE v.first_shot >= '2020-12-11'
-  AND (
-      i.person_id IS NULL                                    -- No infection ever
-      OR DATEDIFF(i.first_infection_date, v.first_shot) > 30 -- Infection after risk period
-  )
+  AND (i.person_id IS NULL OR DATEDIFF(i.first_infection_date, v.first_shot) > 30)
 ORDER BY v.person_id;
