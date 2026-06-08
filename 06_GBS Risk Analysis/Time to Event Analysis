@@ -1,0 +1,398 @@
+# ============================================================================
+# survival_analysis.R
+# Description: Kaplan-Meier survival analysis and Cox regression for GBS risk
+# Compares time-to-GBS across exposure groups from your pipeline
+# ============================================================================
+
+# Load required libraries
+library(survival)
+library(survminer)
+library(ggplot2)
+library(dplyr)
+
+# ============================================================================
+# FUNCTION 1: Main KM Plot (3 groups: Vaccination, Infection, Control)
+# Input: cohort_censored (final censored cohort)
+# ============================================================================
+
+KM_main <- function(cohort_censored) {
+    
+    library(survival)
+    library(survminer)
+
+    # Fit KM curve
+    KM <- survfit(Surv(GBS_interval_2, has_GBS) ~ group_id, data = cohort_censored)
+    
+    # Convert to cumulative incidence (1 - survival)
+    KM$surv <- 1 - KM$surv
+
+    # Summary at specific time points
+    ab <- summary(KM, times = c(0, 10, 20, 30))
+    
+    # Create plot
+    plot <- ggsurvplot(
+        KM,           
+        conf.int = FALSE,  
+        ylab = expression(bold("Probability of Developing GBS, %")),
+        xlab = expression(bold("Days")),
+        ylim = c(0, 0.0001),
+        break.x.by = 5,
+        palette = c("red", "green", "darkblue"),
+        title = "30-Day GBS Incidence Rate after Exposure to COVID-19 Antigens",
+        font.title = c(16, "bold", "Darkblue"),
+        censor.shape = "|", 
+        censor.size = 4,
+        size = 1.5,
+        pval = TRUE,
+        pval.method = TRUE,
+        pval.coord = c(0, 0.00009),
+        legend.title = "",           
+        legend.labs = c('Vaccination', 'Infection', "Negative control"),  
+        risk.table = TRUE,            
+        risk.table.height = 0.25, 
+        risk.table.y.text = FALSE,
+        risk.table.y.text.col = T,
+        surv.plot.height = 0.75,
+        data = cohort_censored,
+        ggtheme = theme_minimal() + theme(
+            panel.grid.major.x = element_blank(),
+            panel.grid.minor.x = element_blank(),
+            panel.grid.major.y = element_line(color = "grey80"),
+            panel.grid.minor.y = element_blank(),
+            axis.line = element_line(color = "black"),
+            axis.title.x = element_text(size = 18, color = "black"),
+            axis.title.y = element_text(size = 18, color = "black", margin = margin(r = 20)),
+            axis.text.x = element_text(size = 18, color = "black", margin = margin(t = 10)),
+            axis.text.y = element_text(size = 18, color = "black"),
+            plot.title = element_text(size = 18, color = "darkblue"),
+            legend.title = element_text(size = 18),
+            legend.text = element_text(size = 18),
+            plot.margin = margin(10, 10, 10, 10),
+            panel.border = element_blank()
+        )
+    )  
+        
+    print(ab)
+    print(plot)
+}
+
+
+# ============================================================================
+# FUNCTION 2: KM Plot - Vaccination vs Infection only (exclude control)
+# Input: cohort_censored (final censored cohort)
+# ============================================================================
+
+KM_vaccine_vs_infection <- function(cohort_censored) {
+    
+    library(survival)
+    library(survminer)
+
+    # Remove control group
+    cohort_censored <- cohort_censored[cohort_censored$group_id != 3, ]
+     
+    KM <- survfit(Surv(GBS_interval_2, has_GBS) ~ group_id, data = cohort_censored)
+    KM$surv <- 1 - KM$surv
+
+    ab <- summary(KM, times = c(0, 10, 20, 30))
+
+    plot <- ggsurvplot(
+        KM,           
+        conf.int = FALSE,  
+        ylab = expression(bold("Probability of Developing GBS, %")),
+        xlab = expression(bold("Days")),
+        ylim = c(0, 0.0001),
+        break.x.by = 5,
+        palette = c("#E7B800", "#2E9FDF"),
+        font.title = c(16, "bold", "Darkblue"),
+        censor.shape = "|", 
+        censor.size = 4,
+        size = 1.5,
+        pval = TRUE,
+        pval.method = TRUE,
+        pval.coord = c(0, 0.00009),
+        legend.title = "",           
+        legend.labs = c('Vaccination', 'Infection'),  
+        risk.table = TRUE,            
+        risk.table.height = 0.25,
+        risk.table.y.text = FALSE,
+        surv.plot.height = 0.75,
+        data = cohort_censored,
+        ggtheme = theme_minimal() + theme(
+            panel.grid.major.x = element_blank(),
+            panel.grid.minor.x = element_blank(),
+            panel.grid.major.y = element_line(color = "grey80"),
+            axis.line = element_line(color = "black"),
+            axis.title.x = element_text(size = 18, color = "black"),
+            axis.title.y = element_text(size = 18, color = "black", margin = margin(r = 20)),
+            axis.text.x = element_text(size = 18, color = "black", margin = margin(t = 10)),
+            axis.text.y = element_text(size = 18, color = "black"),
+            plot.title = element_text(size = 18, color = "darkblue"),
+            legend.title = element_text(size = 18),
+            legend.text = element_text(size = 18),
+            plot.margin = margin(10, 10, 10, 10),
+            panel.border = element_blank()
+        )
+    )  
+        
+    print(ab)
+    print(plot)
+}
+
+
+# ============================================================================
+# FUNCTION 3: KM Plot by Vaccine Platform (mRNA vs Vector)
+# Input: vac18 (vaccine cohort with vac_plart column)
+# ============================================================================
+
+KM_vaccine_platform <- function(vac18) {
+    
+    library(survival)
+    library(survminer)
+
+    # Remove unknown vaccine types
+    vac18 <- vac18[vac18$vac_plart != "Unknown",]
+    vac18$vac_plart <- factor(vac18$vac_plart)
+
+    KM <- survfit(Surv(GBS_interval_2, GBS) ~ vac_plart, data = vac18)
+    KM$surv <- 1 - KM$surv
+
+    ab <- summary(KM, times = c(0, 10, 20, 30))
+
+    plot <- ggsurvplot(
+        KM,           
+        conf.int = FALSE,  
+        ylab = expression(bold("Probability of Developing GBS, %")),
+        xlab = expression(bold("Days")),
+        ylim = c(0, 0.0001),
+        break.x.by = 5,
+        palette = c("red", "blue"),
+        font.title = c(16, "bold", "Darkblue"),
+        censor.shape = "|", 
+        censor.size = 4,
+        size = 1.5,
+        pval = TRUE,
+        pval.method = TRUE,
+        pval.coord = c(0, 0.00009),
+        legend.title = "",           
+        legend.labs = c('mRNA Vaccine', 'Vector Vaccine'),  
+        risk.table = TRUE,            
+        risk.table.height = 0.25, 
+        risk.table.y.text = FALSE,
+        surv.plot.height = 0.75,
+        data = vac18,
+        ggtheme = theme_minimal() + theme(
+            panel.grid.major.x = element_blank(),
+            panel.grid.minor.x = element_blank(),
+            panel.grid.major.y = element_line(color = "grey80"),
+            axis.line = element_line(color = "black"),
+            axis.title.x = element_text(size = 18, color = "black"),
+            axis.title.y = element_text(size = 18, color = "black", margin = margin(r = 20)),
+            axis.text.x = element_text(size = 18, color = "black", margin = margin(t = 10)),
+            axis.text.y = element_text(size = 18, color = "black"),
+            plot.title = element_text(size = 18, color = "darkblue"),
+            legend.title = element_text(size = 18),
+            legend.text = element_text(size = 18),
+            plot.margin = margin(10, 10, 10, 10),
+            panel.border = element_blank()
+        )
+    )  
+    
+    print(plot)
+}
+
+
+# ============================================================================
+# FUNCTION 4: Cox Proportional Hazards Model (Multivariable)
+# Input: demo_gbs (cohort with demographics and comorbidities)
+# ============================================================================
+
+Cox_multivariable <- function(demo_gbs) {
+  
+    library(survival)
+    library(survminer)
+  
+    # Convert columns to factors and set reference levels
+    demo_gbs$group_id <- as.factor(demo_gbs$group_id)
+    demo_gbs$group_id <- factor(demo_gbs$group_id, labels = c('Infection', 'NC'))
+    demo_gbs$group_id <- relevel(demo_gbs$group_id, ref = "NC")
+  
+    demo_gbs$Race <- as.factor(demo_gbs$Race)
+    demo_gbs$Race <- relevel(demo_gbs$Race, ref = "White")
+  
+    demo_gbs$Gender <- factor(demo_gbs$Gender, labels = c('female', 'male', 'unknown'))
+  
+    # Fit Cox model
+    cox_model <- coxph(
+        Surv(GBS_interval_2, GBS) ~ group_id + Age + Gender + Race + Ethnicity + 
+        Total_Visits + AKIHistory + Hypertension + Diabetes_mellitus + 
+        Heart_failure + Cardiovascular_disease + Obesity + Hypothyroidism + 
+        Asthma + COPD + Hyperlipidemia + Stroke + Cancer + 
+        Neurological_disorder + Autoimmune_disease, 
+        data = demo_gbs
+    )  
+  
+    # Create forest plot
+    coxplot <- ggforest(
+        cox_model,
+        data = demo_gbs,
+        fontsize = 1,
+        noDigits = 2,
+        main = "Hazard Ratios of Demographic and Comorbidity Factors"
+    )  
+
+    print(coxplot)
+
+    # Extract results
+    mul_cox <- summary(cox_model)
+    mul_HR <- mul_cox$coefficients[,2] 
+    mul_Pvalue <- mul_cox$coefficients[,5] 
+    mul_CI5 <- round(mul_cox$conf.int[,3], 2)
+    mul_CI95 <- round(mul_cox$conf.int[,4], 2)
+    mul_CI <- paste0(round(mul_HR, 2), ' (', mul_CI5, '-', mul_CI95, ')')
+    Variable <- row.names(data.frame(mul_cox$coefficients))
+    
+    mulcox_res <- data.frame(
+        Variable, 
+        HR = round(mul_HR, 2), 
+        CI5 = mul_CI5, 
+        CI95 = mul_CI95, 
+        `HR (95% CI)` = mul_CI, 
+        Pvalue = round(mul_Pvalue, 4)
+    )
+    colnames(mulcox_res) <- c("Variable", "HR", "CI5", "CI95", "HR (95% CI)", "Pvalue")
+
+    return(mulcox_res)
+}
+
+
+# ============================================================================
+# FUNCTION 5: Time Period Stratified KM (P1, P2, P3)
+# Input: cohort_censored (with time_period_strains column)
+# ============================================================================
+
+KM_by_time_period <- function(cohort_censored, period) {     
+    
+    library(survival)
+    library(survminer)
+
+    # Filter by period (P1, P2, or P3)
+    subset_data <- cohort_censored[cohort_censored$time_period_strains == period,]
+    subset_data <- subset_data[subset_data$group_id != 3, ]  # Remove control
+
+    KM <- survfit(Surv(GBS_interval_2, has_GBS) ~ group_id, data = subset_data)
+    KM$surv <- 1 - KM$surv
+    
+    ab <- summary(KM, times = c(0, 10, 20, 30))
+
+    plot <- ggsurvplot(
+        KM,           
+        conf.int = FALSE,  
+        ylab = expression(bold("Probability of Developing GBS, %")),
+        xlab = expression(bold("Days")),
+        ylim = c(0, 0.0001),
+        break.x.by = 5,
+        palette = c("#E7B800", "#2E9FDF"),
+        title = paste("30-Day GBS Incidence Rate -", period),
+        font.title = c(16, "bold", "Darkblue"),
+        censor.shape = "|", 
+        censor.size = 4,
+        size = 1.5,
+        pval = TRUE,
+        pval.method = TRUE,
+        pval.coord = c(0, 0.00009),
+        legend.title = "",           
+        legend.labs = c('Vaccination', 'Infection'),  
+        risk.table = TRUE,            
+        risk.table.height = 0.25,
+        risk.table.y.text = FALSE,
+        surv.plot.height = 0.75,
+        data = subset_data,
+        ggtheme = theme_minimal() + theme(
+            panel.grid.major.x = element_blank(),
+            panel.grid.minor.x = element_blank(),
+            panel.grid.major.y = element_line(color = "grey80"),
+            axis.line = element_line(color = "black"),
+            axis.title.x = element_text(size = 18, color = "black"),
+            axis.title.y = element_text(size = 18, color = "black", margin = margin(r = 20)),
+            axis.text.x = element_text(size = 18, color = "black", margin = margin(t = 10)),
+            axis.text.y = element_text(size = 18, color = "black"),
+            plot.title = element_text(size = 18, color = "darkblue"),
+            legend.title = element_text(size = 18),
+            legend.text = element_text(size = 18),
+            plot.margin = margin(10, 10, 10, 10),
+            panel.border = element_blank()
+        )
+    )  
+        
+    print(ab)
+    print(plot)
+}
+
+
+# ============================================================================
+# FUNCTION 6: Cox Model for Vaccine Platform Comparison
+# Input: demo_GBS (vaccine cohort with vac_type)
+# ============================================================================
+
+Cox_vaccine_platform <- function(demo_GBS) {
+        
+    library(survival)
+    library(survminer)
+
+    # Filter to vaccine group only
+    subset_data <- demo_GBS[demo_GBS$group_id == 1,]
+    subset_data$vac_type <- factor(subset_data$vac_type)
+
+    cox_model <- coxph(Surv(GBS_interval_2, GBS) ~ vac_type, data = subset_data)
+    
+    plot <- ggforest(
+        cox_model,
+        data = subset_data,
+        main = 'Hazard Ratio by Vaccine Type',
+        fontsize = 1,
+        noDigits = 2
+    )
+    
+    print(plot)
+    
+    return(summary(cox_model))
+}
+
+
+# ============================================================================
+# FUNCTION 7: First vs Second Dose Comparison
+# Input: first_second_shots (cohort with groupid for 1st vs 2nd dose)
+# ============================================================================
+
+Cox_first_vs_second_dose <- function(first_second_shots) {
+
+    library(survival)
+    library(survminer)
+
+    first_second_shots$group_id <- as.factor(first_second_shots$group_id)
+    first_second_shots$group_id <- factor(first_second_shots$group_id, labels = c('1st', '2nd'))
+    first_second_shots$group_id <- relevel(first_second_shots$group_id, ref = "1st")
+
+    cox_model <- coxph(
+        Surv(GBS_interval_2, GBS) ~ groupid + Age + Gender + Race + Ethnicity + 
+        Total_Visits + AKIHistory + Hypertension + Diabetes_mellitus + 
+        Heart_failure + Cardiovascular_disease + Obesity + Hypothyroidism + 
+        Asthma + COPD + Hyperlipidemia + Stroke + Cancer + 
+        Neurological_disorder + Autoimmune_disease, 
+        data = first_second_shots
+    )
+
+    mul_cox <- summary(cox_model)
+    mul_HR <- round(mul_cox$coefficients[,2], 2) 
+    mul_Pvalue <- round(mul_cox$coefficients[,5], 4) 
+    mul_CI5 <- round(mul_cox$conf.int[,3], 2)
+    mul_CI95 <- round(mul_cox$conf.int[,4], 2)
+    mul_CI <- paste0(mul_HR, ' (', mul_CI5, '-', mul_CI95, ')')
+    Variable <- row.names(data.frame(mul_cox$coefficients))
+    
+    mulcox_res <- data.frame(Variable, aHR = mul_HR, CI5 = mul_CI5, CI95 = mul_CI95, 
+                              `95_CI` = mul_CI, Pvalue = mul_Pvalue)
+    colnames(mulcox_res) <- c("Variable", "aHR", "CI5", "CI95", "95_CI", "Pvalue")
+
+    return(mulcox_res)
+}

@@ -166,10 +166,10 @@ LEFT JOIN VisitCTE v ON a.person_id = v.person_id;
 SELECT *,
     CAST(age AS DECIMAL(10, 2)) AS age_num,
     CASE
-        WHEN ethnicity IN ('UNKOWN', 'no info') THEN 'UNKOWN'
+        WHEN ethnicity IN ('UNKNOWN', 'no info') THEN 'UNKNOWN'
         WHEN ethnicity = 'Not Hispanic or Latino' THEN 'Not Hispanic or Latino'
         WHEN ethnicity = 'Hispanic or Latino' THEN 'Hispanic or Latino'
-        ELSE 'UNKOWN'
+        ELSE 'UNKNOWN'
     END AS ethnicity_1
 FROM all_cohort_table_1;
 
@@ -217,21 +217,6 @@ FROM (
             ELSE q.GBS_interval
         END AS GBS_interval_2,
         
-        -- Pandemic phase (wave-based)
-        CASE
-            WHEN (q.time_zero >= '2020-12-01' AND q.time_zero < '2021-05-01') THEN 'P1'
-            WHEN (q.time_zero >= '2021-05-01' AND q.time_zero < '2021-12-01') THEN 'P2'
-            WHEN (q.time_zero >= '2021-12-01') THEN 'P3'
-            ELSE NULL
-        END AS time_period,
-        
-        -- Pandemic phase (strain-based)
-        CASE
-            WHEN (q.time_zero >= '2020-12-01' AND q.time_zero < '2021-04-01') THEN 'P1'
-            WHEN (q.time_zero >= '2021-04-01' AND q.time_zero < '2021-12-01') THEN 'P2'
-            WHEN (q.time_zero >= '2021-12-01') THEN 'P3'
-            ELSE NULL
-        END AS time_period_strains
         
     FROM queue_group q
     JOIN COHORT_without_null c ON q.person_id = c.person_id
