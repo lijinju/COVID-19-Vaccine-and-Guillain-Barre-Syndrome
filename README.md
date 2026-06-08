@@ -4,7 +4,7 @@ This repository contains the reproducible data pipeline and analysis code for a 
 
 The pipeline is built on the **OMOP Common Data Model (CDM)** and utilizes advanced epidemiological safeguards to handle immortal time bias, competing risks, and surveillance bias. It is designed to be executed on any OHDSI-compliant database (e.g., PostgreSQL, BigQuery, Snowflake, Databricks, Spark SQL).
 
-## 🎯 Study Design: Target Trial Emulation
+## Study Design: Target Trial Emulation
 The study emulates a target trial with a primary **30-day risk window** (with sensitivity analyses at 60 and 90 days) starting from `Time_Zero`.
 
 ### Cohort Allocation
@@ -19,7 +19,7 @@ To prevent **immortal time bias**, patients are assigned to mutually exclusive g
 * **Competing Risks:** Survival time is censored at the date of death if the patient dies before developing GBS.
 * **Surveillance Bias Adjustment:** Baseline healthcare utilization (Outpatient, ER, Inpatient visit counts) is calculated and adjusted for.
 
-## 🔬 Statistical Analysis Features
+## Statistical Analysis Features
 
 - **Primary Analysis**: Incidence rates and risk differences in 30-day window
 - **Censoring**: Right-censoring at death or end of risk window
