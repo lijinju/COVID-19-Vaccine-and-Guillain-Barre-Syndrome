@@ -1,0 +1,220 @@
+ 
+--================================================================================
+--Build_Infection_With_Prior_Vaccination.sql
+--Description: Build infection cohort stratified by prior vaccination status
+--             Compares GBS risk after infection in:
+--               - Vaccinated (infection occurred AFTER vaccination)
+--               - Unvaccinated (infection with NO prior vaccine dose)
+
+--Main Research Question:
+--  Does prior COVID-19 vaccination modify the risk of GBS following COVID-19 infection?
+--================================================================================
+ 
+
+-- ===============================================================================
+-- Step 1: Link infections to all prior vaccinations and rank them by recency
+-- ================================================================================
+
+WITH ranked_prior_vaccines AS (
+    SELECT 
+        i.person_id,
+        i.infection_date,
+        i.infection_episode,
+        i.infection_episode_name,
+        v.vaccine_date,
+        v.vaccine_episode,
+        v.vaccine_episode_name,
+        DATEDIFF(i.infection_date, v.vaccine_date) AS days_vaccine_to_infection,
+        ROW_NUMBER() OVER (
+            PARTITION BY i.person_id, i.infection_date 
+            ORDER BY v.vaccine_date DESC  -- Bring most recent vaccine to rank 1
+        ) AS vaccine_rank
+    FROM all_infections_base i
+    LEFT JOIN all_vaccinations_base v 
+        ON i.person_id = v.person_id
+        AND v.vaccine_date < i.infection_date  -- Must occur strictly BEFORE infection
+),
+
+-- ================================================================================
+-- Step 2: Extract only the most recent vaccine and assign status/exclusion flags
+-- ================================================================================
+
+    SELECT 
+        i.person_id,
+        i.infection_date,
+        i.infection_episode,
+        i.infection_episode_name,
+        
+        -- Primary Status Flags
+        CASE WHEN pv.person_id IS NOT NULL THEN 1 ELSE 0 END AS had_prior_vaccine,
+        pv.vaccine_date AS most_recent_vaccine_date,
+        pv.vaccine_episode AS most_recent_vaccine_episode,
+        pv.vaccine_episode_name AS most_recent_vaccine_episode_name,
+        pv.days_vaccine_to_infection AS days_from_vaccine_to_infection,
+        
+        -- 30-Day Risk Overlap Window Handling
+        CASE WHEN pv.person_id IS NOT NULL AND pv.days_vaccine_to_infection <= 30 THEN 1 ELSE 0 END AS infection_within_30_days_of_vaccine,
+        CASE WHEN pv.person_id IS NOT NULL AND pv.days_vaccine_to_infection > 30 THEN 1 ELSE 0 END AS valid_vaccinated_infection,
+        
+        -- Stratification Categories
+        CASE 
+            WHEN pv.person_id IS NULL THEN 'No_Prior_Vaccine'
+            WHEN pv.days_vaccine_to_infection <= 30 THEN 'Excluded_Vaccine_Within_30_Days'
+            WHEN pv.days_vaccine_to_infection BETWEEN 31 AND 60 THEN 'Vaccine_31-60_Days_Prior'
+            WHEN pv.days_vaccine_to_infection BETWEEN 61 AND 90 THEN 'Vaccine_61-90_Days_Prior'
+            WHEN pv.days_vaccine_to_infection BETWEEN 91 AND 180 THEN 'Vaccine_91-180_Days_Prior'
+            WHEN pv.days_vaccine_to_infection > 180 THEN 'Vaccine_180+_Days_Prior'
+            ELSE 'Unknown'
+        END AS prior_vaccine_timing_category
+    FROM all_infections_base i
+    LEFT JOIN ranked_prior_vaccines pv 
+        ON i.person_id = pv.person_id 
+        AND i.infection_date = pv.infection_date 
+        AND pv.vaccine_rank = 1
+),
+-- ================================================================================
+-- Step 3: Layer on post-infection GBS outcomes and windows
+-- ================================================================================
+
+infection_gbs_outcome AS (
+    SELECT 
+        i.*,
+        g.condition_start_date AS gbs_date,
+        DATEDIFF(g.condition_start_date, i.infection_date) AS days_infection_to_gbs,
+        
+        -- Risk Window Flags
+        CASE WHEN g.condition_start_date IS NOT NULL AND DATEDIFF(g.condition_start_date, i.infection_date) BETWEEN 1 AND 29 THEN 1 ELSE 0 END AS gbs_within_30,
+        CASE WHEN g.condition_start_date IS NOT NULL AND DATEDIFF(g.condition_start_date, i.infection_date) BETWEEN 1 AND 59 THEN 1 ELSE 0 END AS gbs_within_60,
+        CASE WHEN g.condition_start_date IS NOT NULL AND DATEDIFF(g.condition_start_date, i.infection_date) BETWEEN 1 AND 89 THEN 1 ELSE 0 END AS gbs_within_90,
+        CASE WHEN g.condition_start_date IS NOT NULL AND g.condition_start_date > i.infection_date THEN 1 ELSE 0 END AS has_gbs,
+        
+        -- Timing Categories
+        CASE 
+            WHEN g.condition_start_date IS NULL THEN 'No_GBS'
+            WHEN DATEDIFF(g.condition_start_date, i.infection_date) BETWEEN 1 AND 7 THEN 'GBS_1-7_Days'
+            WHEN DATEDIFF(g.condition_start_date, i.infection_date) BETWEEN 8 AND 14 THEN 'GBS_8-14_Days'
+            WHEN DATEDIFF(g.condition_start_date, i.infection_date) BETWEEN 15 AND 21 THEN 'GBS_15-21_Days'
+            WHEN DATEDIFF(g.condition_start_date, i.infection_date) BETWEEN 22 AND 29 THEN 'GBS_22-29_Days'
+            WHEN DATEDIFF(g.condition_start_date, i.infection_date) >= 30 THEN 'GBS_30+_Days'
+            ELSE 'GBS_Before_Infection'
+        END AS gbs_timing_category
+    FROM infection_with_vaccine_status i
+    LEFT JOIN GBS_ALL g ON i.person_id = g.person_id
+    WHERE (g.condition_start_date > i.infection_date OR g.person_id IS NULL)
+),
+
+-- ================================================================================
+-- Step 4: Identify historical baseline GBS cases (Lookback of 365 days prior)
+-- ================================================================================
+
+infection_control_period AS (
+    SELECT DISTINCT
+        i.person_id,
+        i.infection_date
+    FROM infection_gbs_outcome i
+    INNER JOIN GBS_ALL g ON i.person_id = g.person_id
+    WHERE g.condition_start_date < i.infection_date
+      AND DATEDIFF(i.infection_date, g.condition_start_date) BETWEEN 1 AND 365
+),
+
+     -- Step 5: Cleanse cohort by excluding patients with recent prior history of GBS
+infection_first_gbs AS (
+    SELECT i.*
+    FROM infection_gbs_outcome i
+    LEFT JOIN infection_control_period cp 
+        ON i.person_id = cp.person_id 
+        AND i.infection_date = cp.infection_date
+    WHERE cp.person_id IS NULL  -- Excludes the patients flagged in step 4
+),
+
+     -- Step 6: Consolidate death facts to single records per patient
+death_clean AS (
+    SELECT person_id, MAX(death_date) AS death_date, 1 AS death_fact
+    FROM death
+    GROUP BY person_id
+)
+
+-- =============================================================================
+-- FINAL OUTPUTS: Split Into Target Groups
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- TARGET 1: infection_vaccinated_final  
+-- -----------------------------------------------------------------------------
+-- CREATE TABLE infection_vaccinated_final AS 
+SELECT 
+    10 AS group_id, 
+    'infection_after_vaccine' AS group_name, 
+    i.person_id,
+    i.infection_date AS time_zero,
+    DATE_ADD(i.infection_date, 30) AS time_end, 
+    
+    -- GBS SCCS Interval Cap
+    CASE 
+        WHEN i.has_gbs = 1 AND i.days_infection_to_gbs <= 30 THEN i.days_infection_to_gbs
+        ELSE 30 
+    END AS gbs_interval,
+    
+    i.has_gbs AS has_GBS, 
+    i.gbs_date AS GBS_start_date,
+    
+    -- Death Metrics
+    d.death_date,
+    CASE WHEN d.death_fact = 1 THEN TRUE ELSE FALSE END AS death,
+    CASE WHEN d.death_date IS NOT NULL AND DATEDIFF(d.death_date, i.infection_date) <= 30 THEN 1 ELSE 0 END AS death_in_30days,
+    CASE WHEN d.death_date IS NULL AND d.death_fact = 1 THEN TRUE ELSE FALSE END AS missing_death_date,
+    
+    -- Metadata & Covariates
+    i.had_prior_vaccine,
+    i.most_recent_vaccine_date,
+    i.days_from_vaccine_to_infection,
+    i.prior_vaccine_timing_category,
+    i.most_recent_vaccine_episode,
+    i.most_recent_vaccine_episode_name,
+    i.infection_episode,
+    i.infection_episode_name,
+    i.gbs_timing_category,
+    i.days_infection_to_gbs,
+    i.valid_vaccinated_infection AS vaccinated_analysis_included
+FROM infection_first_gbs i
+LEFT JOIN death_clean d ON i.person_id = d.person_id
+WHERE i.had_prior_vaccine = 1
+  AND i.valid_vaccinated_infection = 1  -- CRITICAL: Pulls out clean >30-day window observations
+  AND i.infection_date >= '2020-12-11';
+
+-- -----------------------------------------------------------------------------
+-- TARGET 2: infection_unvaccinated_final  
+-- -----------------------------------------------------------------------------
+-- CREATE TABLE infection_unvaccinated_final AS 
+SELECT 
+    11 AS group_id, 
+    'infection_no_prior_vaccine' AS group_name, 
+    i.person_id,
+    i.infection_date AS time_zero,
+    DATE_ADD(i.infection_date, 30) AS time_end, 
+    
+    -- GBS SCCS Interval Cap
+    CASE 
+        WHEN i.has_gbs = 1 AND i.days_infection_to_gbs <= 30 THEN i.days_infection_to_gbs
+        ELSE 30 
+    END AS gbs_interval,
+    
+    i.has_gbs AS has_GBS, 
+    i.gbs_date AS GBS_start_date,
+    
+    -- Death Metrics
+    d.death_date,
+    CASE WHEN d.death_fact = 1 THEN TRUE ELSE FALSE END AS death,
+    CASE WHEN d.death_date IS NOT NULL AND DATEDIFF(d.death_date, i.infection_date) <= 30 THEN 1 ELSE 0 END AS death_in_30days,
+    CASE WHEN d.death_date IS NULL AND d.death_fact = 1 THEN TRUE ELSE FALSE END AS missing_death_date,
+    
+    -- Metadata & Covariates
+    i.had_prior_vaccine,
+    i.infection_episode,
+    i.infection_episode_name,
+    i.gbs_timing_category,
+    i.days_infection_to_gbs
+FROM infection_first_gbs i
+LEFT JOIN death_clean d ON i.person_id = d.person_id
+WHERE i.had_prior_vaccine = 0
+  AND i.infection_date >= '2020-12-11';

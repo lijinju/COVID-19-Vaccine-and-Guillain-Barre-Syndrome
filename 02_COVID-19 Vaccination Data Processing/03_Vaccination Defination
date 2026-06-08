@@ -1,5 +1,5 @@
 -- ============================================================================
--- 01_vaccine_first_group.sql
+-- Vaccine_first_group.sql
 -- Description: Patients vaccinated BEFORE infection (or no infection)
 -- Excludes: Infection before vaccine OR within 30 days post-vaccine
 -- Depends on: all_vaccine_fact, all_infection_fact 
@@ -31,3 +31,9 @@ LEFT JOIN all_infection_fact i ON v.person_id = i.person_id
 WHERE v.first_shot >= '2020-12-11'
   AND (i.person_id IS NULL OR DATEDIFF(i.first_infection_date, v.first_shot) > 30)
 ORDER BY v.person_id;
+
+-- Extract just the person_ids for the vaccination-first cohort
+
+SELECT DISTINCT person_id, first_short
+FROM Vaccination_first_group
+WHERE vaccine_first_group = 1;
