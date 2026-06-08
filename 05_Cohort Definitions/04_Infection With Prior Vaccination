@@ -16,7 +16,7 @@
 -- Vaccinated-before-infection subcohort (365-day washout window)
 -- Source: Infection_vaccine_first1y (GBS_vaccine_infection1y)
 -- Identifies patients whose COVID infection occurred AFTER a prior vaccine dose
--- Washout window: vaccine must be within 365 days BEFORE infection
+-- vaccine must be within 365 days BEFORE infection
 -- -----------------------------------------------------------------------
 
 -- Patients infected after vaccination (vaccine 1–365 days before infection)
