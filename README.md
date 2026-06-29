@@ -19,4 +19,5 @@ To prevent **immortal time bias**, patients are assigned to mutually exclusive g
 * **Competing Risks:** Survival time is censored at the date of death if the patient dies before developing GBS.
 * **Surveillance Bias Adjustment:** Baseline healthcare utilization (Outpatient, ER, Inpatient visit counts) is calculated and adjusted for.
 
+<img width="1003" height="578" alt="image" src="https://github.com/user-attachments/assets/73c458a3-81e4-4c72-84b8-caa26c56957e" />
 
