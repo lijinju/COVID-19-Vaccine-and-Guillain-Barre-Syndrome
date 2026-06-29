@@ -9,14 +9,17 @@ The study emulates a target trial with a primary **30-day risk window** (with se
 
 
 ### Cohort Allocation
-To prevent **immortal time bias**, patients are assigned to mutually exclusive groups based on their *first* occurring event after the pandemic/vaccine onset (`2020-12-11`):
-1. **Vaccine First:** Index date = 1st (or 2nd) COVID-19 vaccine dose.
-2. **Infection First:** Index date = 1st confirmed SARS-CoV-2 infection.
-3. **Visit First (Negative Control):** Index date = Routine medical visit / Well-check (Controls for healthcare-seeking behavior).
-4. **Sequential:** Vaccinated, then subsequently infected.
+To minimize immortal time bias, participants were assigned to mutually exclusive exposure groups according to the first qualifying event occurring on or after December 11, 2020, the start of COVID-19 vaccine availability. The index date was defined by this initial event.
+
+Vaccination-First Cohort: Index date defined by the first (or second, for dose-specific analyses) COVID-19 vaccine administration.
+Infection-First Cohort: Index date defined by the first documented SARS-CoV-2 infection.
+Visit-First Control Cohort: Index date defined by a routine healthcare encounter or well-care visit, serving as a contemporary control group to account for healthcare-seeking behavior.
+
+Participants were assigned to only one cohort based on their earliest qualifying event. This approach ensured that follow-up time preceding exposure was not incorrectly attributed to the exposed group, thereby reducing immortal time bias.
 
 <img width="1003" height="578" alt="image" src="https://github.com/user-attachments/assets/73c458a3-81e4-4c72-84b8-caa26c56957e" />
 
+In a secondary analysis, we evaluated a sequential exposure cohort consisting of individuals who received COVID-19 vaccination and subsequently developed SARS-CoV-2 infection.
 
 ### Epidemiological Surveillance Measures
 * **Prevalent Case Exclusion:** 365-day lookback to exclude patients with prior GBS diagnoses.
