@@ -1,8 +1,8 @@
 
 ## 📖 Overview
-This repository contains the data processing pipeline and analytic code for a large-scale retrospective cohort study emulating to evaluate the incidence of **Guillain-Barré Syndrome (GBS)** following **COVID-19 vaccination**. 
+This repository contains the data processing pipeline and analytic code for a large-scale retrospective cohort study evaluating the incidence of Guillain-Barré Syndrome (GBS) following COVID-19 vaccination.
 
-The pipeline is built on the **OMOP Common Data Model (CDM)** and utilizes advanced epidemiological safeguards to handle immortal time bias, competing risks, and surveillance bias.
+The pipeline is built on the OMOP Common Data Model (CDM) and incorporates epidemiological safeguards to address immortal time bias, competing risks, and surveillance bias.
 
 ### Cohort Allocation
 Study participants were assigned to mutually exclusive exposure groups according to the first qualifying event occurring on or after December 11, 2020.
@@ -33,8 +33,8 @@ The study period spans from **1 year prior to the index date** through **90 days
 **Censoring:** Participants were censored at the end of their respective follow-up window (30/60/90 days) if no GBS event occurred, or at death if it occurred within the follow-up period.
 
 ### Epidemiological Surveillance Measures
-* **Prevalent Case Exclusion:** 365-day lookback to exclude patients with prior GBS diagnoses.
-* **Competing Risks:** Survival time is censored at the date of death if the patient dies before developing GBS.
-* **Surveillance Bias Adjustment:** Baseline healthcare utilization (Outpatient, ER, Inpatient visit counts) is calculated and adjusted for.
 
+- **Prevalent Case Exclusion:** 365-day look-back to exclude patients with prior GBS diagnoses.
+- **Competing Risks:** Survival time is censored at the date of death if the patient dies before developing GBS.
+- **Surveillance Bias Adjustment:** Baseline healthcare utilization (outpatient, ER, and inpatient visit counts) is calculated and adjusted for.
 
