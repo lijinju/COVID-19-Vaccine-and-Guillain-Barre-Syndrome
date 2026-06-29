@@ -7,8 +7,6 @@ The pipeline is built on the **OMOP Common Data Model (CDM)** and utilizes advan
 ## Study Design: Target Trial Emulation
 The study emulates a target trial with a primary **30-day risk window** (with sensitivity analyses at 60 and 90 days) starting from `Time_Zero`.
 
-<img width="1003" height="578" alt="image" src="https://github.com/user-attachments/assets/73c458a3-81e4-4c72-84b8-caa26c56957e" />
-
 
 ### Cohort Allocation
 To prevent **immortal time bias**, patients are assigned to mutually exclusive groups based on their *first* occurring event after the pandemic/vaccine onset (`2020-12-11`):
@@ -16,6 +14,9 @@ To prevent **immortal time bias**, patients are assigned to mutually exclusive g
 2. **Infection First:** Index date = 1st confirmed SARS-CoV-2 infection.
 3. **Visit First (Negative Control):** Index date = Routine medical visit / Well-check (Controls for healthcare-seeking behavior).
 4. **Sequential:** Vaccinated, then subsequently infected.
+
+<img width="1003" height="578" alt="image" src="https://github.com/user-attachments/assets/73c458a3-81e4-4c72-84b8-caa26c56957e" />
+
 
 ### Epidemiological Surveillance Measures
 * **Prevalent Case Exclusion:** 365-day lookback to exclude patients with prior GBS diagnoses.
