@@ -17,7 +17,6 @@ To minimize immortal time bias, participants were assigned to mutually exclusive
 
 **Visit-First Control Cohort**: Index date defined by the routine medical visit / well-check, serving as a contemporary control group to account for healthcare-seeking behavior.
 
-Participants were assigned to only one cohort based on their earliest qualifying event, thereby reducing immortal time bias.
 
 <img width="1003" height="578" alt="image" src="https://github.com/user-attachments/assets/73c458a3-81e4-4c72-84b8-caa26c56957e" />
 
