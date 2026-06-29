@@ -7,11 +7,11 @@ The pipeline is built on the OMOP Common Data Model (CDM) and incorporates epide
 ### Cohort Allocation
 Study participants were assigned to mutually exclusive exposure groups according to the first qualifying event occurring on or after December 11, 2020.
 
-**Vaccination Cohort**: Index date defined by the first (or second, for dose-specific analyses) COVID-19 vaccine administration.
+- **Vaccination Cohort**: Index date defined by the first (or second, for dose-specific analyses) COVID-19 vaccine administration.
 
-**Infection Cohort**: Index date defined by the first documented SARS-CoV-2 infection.
+- **Infection Cohort**: Index date defined by the first documented SARS-CoV-2 infection.
 
-**Well care Visit Control Cohort**: Index date defined by the routine medical visit / well-check, serving as a contemporary control group to account for healthcare-seeking behavior.
+- **Well care Visit Control Cohort**: Index date defined by the routine medical visit / well-check, serving as a contemporary control group to account for healthcare-seeking behavior.
 
 
 <img width="1003" height="578" alt="image" src="https://github.com/user-attachments/assets/73c458a3-81e4-4c72-84b8-caa26c56957e" />
