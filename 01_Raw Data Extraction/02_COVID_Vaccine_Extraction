@@ -10,7 +10,7 @@ SELECT
     d.person_id,
     d.drug_exposure_start_date,
     d.drug_concept_id,
-    c.concept_name AS drug_concept_name,
+    d.drug_concept_name,
     d.drug_exposure_id
 FROM drug_exposure d
 WHERE d.drug_concept_id IN (
