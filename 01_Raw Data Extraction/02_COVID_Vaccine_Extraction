@@ -13,8 +13,6 @@ SELECT
     c.concept_name AS drug_concept_name,
     d.drug_exposure_id
 FROM drug_exposure d
-JOIN concept c
-    ON d.drug_concept_id = c.concept_id
 WHERE d.drug_concept_id IN (
     42649039, 37003432, 37003434, 37003435, 1759205, 779678,
     1525539, 722118, 722117, 722119, 722120, 778267,
