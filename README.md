@@ -14,7 +14,6 @@ Study participants were assigned to mutually exclusive exposure groups according
 
 ![alt text](image.png)
 
-<img width="1021" height="575" alt="image" src="https://github.com/user-attachments/assets/9ec6b77b-fb2c-4f59-86e5-c2a2b4502a61" />
 
 We additionally evaluated a sequential exposure cohort consisting of individuals who received COVID-19 vaccination and subsequently developed SARS-CoV-2 infection.
 
