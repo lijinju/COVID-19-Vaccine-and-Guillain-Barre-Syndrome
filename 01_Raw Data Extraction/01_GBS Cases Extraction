@@ -6,7 +6,7 @@ Description: Extract all Guillain-Barré Syndrome patients from condition_occurr
 ================================================================================
 */
 
-SELECT DISTINCT 
+SELECT 
     person_id, 
     condition_concept_id, 
     condition_start_date, 
