@@ -12,8 +12,6 @@ Study participants were assigned to mutually exclusive exposure groups according
 
 - **Well care Visit Control Cohort**: Index date defined by the routine medical visit / well-check, serving as a contemporary control group to account for healthcare-seeking behavior.
 
-<img alt="image" src="https://github.com/user-attachments/assets/bbcb182c-330f-4db7-b9ef-b798b7a8d788" />
-
 We additionally evaluated a sequential exposure cohort consisting of individuals who received COVID-19 vaccination and subsequently developed SARS-CoV-2 infection.
 
 ### Study Period & Follow-up
